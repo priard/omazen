@@ -456,25 +456,34 @@
   overflow: clip;
 }
 
-:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper::before {
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper::after {
   content:
-    " ██████╗ ███╗   ███╗ █████╗ ██████╗  ██████╗██╗  ██╗██╗   ██╗" "\A"
-    "██╔═══██╗████╗ ████║██╔══██╗██╔══██╗██╔════╝██║  ██║╚██╗ ██╔╝" "\A"
-    "██║   ██║██╔████╔██║███████║██████╔╝██║     ███████║ ╚████╔╝ " "\A"
-    "██║   ██║██║╚██╔╝██║██╔══██║██╔══██╗██║     ██╔══██║  ╚██╔╝  " "\A"
-    "╚██████╔╝██║ ╚═╝ ██║██║  ██║██║  ██║╚██████╗██║  ██║   ██║   " "\A"
-    " ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ";
+    "███████╗███████╗███╗   ██╗" "\A"
+    "╚══███╔╝██╔════╝████╗  ██║" "\A"
+    "  ███╔╝ █████╗  ██╔██╗ ██║" "\A"
+    " ███╔╝  ██╔══╝  ██║╚██╗██║" "\A"
+    "███████╗███████╗██║ ╚████║" "\A"
+    "╚══════╝╚══════╝╚═╝  ╚═══╝";
   position: absolute;
+  display: block !important;
+  width: max-content;
+  height: max-content;
   inset: 50% auto auto 50%;
-  z-index: 2;
+  z-index: 999;
   translate: -50% -50%;
   color: var(--omazen-accent);
-  font: 600 clamp(7px, 0.72vw, 14px) / 1.15 monospace;
+  font: 600 clamp(12px, 1.3vw, 26px) / 1.05 monospace;
   text-align: left;
   white-space: pre;
   opacity: 0.68;
   pointer-events: none;
   user-select: none;
+}
+
+@media (max-width: 800px), (max-height: 600px) {
+  :root[data-omazen-enabled="true"][zen-has-empty-tab="true"] #zen-tabbox-wrapper::after {
+    display: none !important;
+  }
 }
 
 :root[data-omazen-enabled="true"] #zen-sidebar-splitter,
