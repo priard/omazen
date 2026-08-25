@@ -45,6 +45,7 @@
   --tab-selected-textcolor: var(--omazen-foreground) !important;
   --omazen-scrollbar-thumb: var(--omazen-foreground-muted);
   --omazen-scrollbar-track: var(--omazen-background-dark);
+  --omazen-content-radius: calc(var(--zen-native-inner-radius) + 4px);
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
 }
 
@@ -427,9 +428,11 @@
 }
 
 :root[data-omazen-enabled="true"] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--omazen-border) 55%, var(--omazen-background)) !important;
+  border-radius: var(--omazen-content-radius) !important;
   background-color: var(--omazen-background) !important;
-  border-color: var(--omazen-background) !important;
-  box-shadow: none !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--omazen-foreground) 10%, transparent) !important;
 }
 
 :root[data-omazen-enabled="true"] #zen-tabbox-wrapper {
@@ -447,9 +450,9 @@
 
 :root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper {
   box-sizing: border-box;
-  border: 2px solid color-mix(in srgb, var(--omazen-border) 55%, var(--omazen-background)) !important;
-  border-radius: var(--zen-native-inner-radius) !important;
-  box-shadow: none !important;
+  border: 1px solid color-mix(in srgb, var(--omazen-border) 55%, var(--omazen-background)) !important;
+  border-radius: var(--omazen-content-radius) !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--omazen-foreground) 10%, transparent) !important;
   overflow: clip;
 }
 
@@ -476,7 +479,7 @@
   .browserStack,
   .browserStack > browser[type="content"]
 ) {
-  clip-path: inset(0 round var(--zen-native-inner-radius)) !important;
+  clip-path: inset(0 round var(--omazen-content-radius)) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
