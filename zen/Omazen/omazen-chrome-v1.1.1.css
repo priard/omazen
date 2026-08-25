@@ -456,6 +456,27 @@
   overflow: clip;
 }
 
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper::before {
+  content:
+    " ██████╗ ███╗   ███╗ █████╗ ██████╗  ██████╗██╗  ██╗██╗   ██╗" "\A"
+    "██╔═══██╗████╗ ████║██╔══██╗██╔══██╗██╔════╝██║  ██║╚██╗ ██╔╝" "\A"
+    "██║   ██║██╔████╔██║███████║██████╔╝██║     ███████║ ╚████╔╝ " "\A"
+    "██║   ██║██║╚██╔╝██║██╔══██║██╔══██╗██║     ██╔══██║  ╚██╔╝  " "\A"
+    "╚██████╔╝██║ ╚═╝ ██║██║  ██║██║  ██║╚██████╗██║  ██║   ██║   " "\A"
+    " ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 2;
+  translate: -50% -50%;
+  color: var(--omazen-accent);
+  font: 600 clamp(7px, 0.72vw, 14px) / 1.15 monospace;
+  text-align: left;
+  white-space: pre;
+  opacity: 0.68;
+  pointer-events: none;
+  user-select: none;
+}
+
 :root[data-omazen-enabled="true"] #zen-sidebar-splitter,
 :root[data-omazen-enabled="true"] #zen-sidebar-splitter:hover {
   background: var(--omazen-background) !important;
