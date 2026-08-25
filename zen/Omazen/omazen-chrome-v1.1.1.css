@@ -12,8 +12,9 @@
   --zen-colors-border-contrast: var(--omazen-accent) !important;
   --zen-colors-input-bg: var(--omazen-background-light) !important;
   --zen-colors-hover-bg: color-mix(in srgb, var(--omazen-background-light) 82%, var(--omazen-accent)) !important;
-  --zen-main-browser-background: var(--omazen-background-dark) !important;
+  --zen-main-browser-background: var(--omazen-background) !important;
   --zen-main-browser-background-toolbar: var(--omazen-background) !important;
+  --zen-themed-toolbar-bg-transparent: var(--omazen-background) !important;
   --zen-navigator-toolbox-background: var(--omazen-background) !important;
   --zen-toolbar-element-bg: color-mix(in srgb, var(--omazen-background-light) 88%, transparent) !important;
   --zen-toolbar-element-bg-hover: color-mix(in srgb, var(--omazen-selection) 78%, var(--omazen-accent)) !important;
@@ -35,6 +36,8 @@
   --arrowpanel-color: var(--omazen-foreground) !important;
   --arrowpanel-border-color: var(--omazen-border) !important;
   --panel-separator-color: var(--omazen-border) !important;
+  --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+  --zen-big-shadow: 0 1px 3px color-mix(in srgb, var(--omazen-foreground) 8%, transparent) !important;
   --input-bgcolor: var(--omazen-background-dark) !important;
   --input-color: var(--omazen-foreground) !important;
   --focus-outline-color: var(--omazen-accent) !important;
@@ -55,6 +58,17 @@
 ) {
   background-color: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-main-app-wrapper {
+  background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #zen-appcontent-wrapper,
+  #zen-tabbox-wrapper
+) {
+  background: var(--omazen-background) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -115,7 +129,6 @@
 }
 
 :root[data-omazen-enabled="true"] :is(
-  menupopup,
   panel,
   panelmultiview,
   .panel-arrowcontent,
@@ -125,9 +138,28 @@
 ) {
   --panel-background: var(--omazen-background-dark) !important;
   --panel-color: var(--omazen-foreground) !important;
+  --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
   background-color: var(--omazen-background-dark) !important;
   color: var(--omazen-foreground) !important;
   border-color: var(--omazen-border) !important;
+}
+
+/* Keep the popup window's shadow margin transparent. The visible menu surface
+ * lives in ::part(content); painting the host produces an opaque square halo. */
+:root[data-omazen-enabled="true"] menupopup {
+  --panel-background: var(--omazen-background-dark) !important;
+  --panel-color: var(--omazen-foreground) !important;
+  --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+  background-color: transparent !important;
+  color: var(--omazen-foreground) !important;
+  border-color: transparent !important;
+}
+
+:root[data-omazen-enabled="true"] menupopup::part(content) {
+  background: var(--omazen-background-dark) !important;
+  color: var(--omazen-foreground) !important;
+  border-color: var(--omazen-border) !important;
+  box-shadow: var(--panel-box-shadow) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -392,6 +424,66 @@
 
 :root[data-omazen-enabled="true"] .browserSidebarContainer[is-zen-split="true"] {
   outline-color: var(--omazen-border) !important;
+}
+
+:root[data-omazen-enabled="true"] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
+  background-color: var(--omazen-background) !important;
+  border-color: var(--omazen-background) !important;
+  box-shadow: none !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-tabbox-wrapper {
+  box-shadow: none !important;
+}
+
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) :is(
+  #zen-tabbox-wrapper,
+  #tabbrowser-tabbox,
+  #tabbrowser-tabpanels,
+  .browserSidebarContainer.deck-selected
+) {
+  background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper {
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--omazen-border) 55%, var(--omazen-background)) !important;
+  border-radius: var(--zen-native-inner-radius) !important;
+  box-shadow: none !important;
+  overflow: clip;
+}
+
+:root[data-omazen-enabled="true"] #zen-sidebar-splitter,
+:root[data-omazen-enabled="true"] #zen-sidebar-splitter:hover {
+  background: var(--omazen-background) !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-sidebar-splitter::before {
+  background: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] .browserStack {
+  background-color: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] .browserStack > browser[type="content"] {
+  background-color: transparent !important;
+}
+
+:root[data-omazen-enabled="true"]:not([sizemode="fullscreen"]) :is(
+  .browserStack,
+  .browserStack > browser[type="content"]
+) {
+  clip-path: inset(0 round var(--zen-native-inner-radius)) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #tabbrowser-tabbox,
+  #tabbrowser-tabpanels
+) {
+  background-color: var(--omazen-background) !important;
 }
 
 :root[data-omazen-enabled="true"] ::selection {
