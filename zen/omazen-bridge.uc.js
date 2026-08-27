@@ -22,11 +22,14 @@
   const STYLE_ID = "omazen-chrome-style";
   const CONTENT_STYLE_ID = "omazen-content-style";
   const VERSION = "1.1.1";
-  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.1.1.css";
+  const STYLE_URI =
+    "chrome://userscripts/content/Omazen/omazen-chrome-v1.1.1.css?theme-aware-hover-contrast-9";
   const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.1.1.css";
   const {
     COLOR_KEYS,
+    accentForeground,
     actorPayload,
+    selectionForeground,
     setRootPalette,
     validatePalette,
   } = ChromeUtils.importESModule(
@@ -139,6 +142,8 @@
   function contentPaletteCss(palette) {
     const hover = `color-mix(in srgb, ${palette.background_light} 82%, ${palette.accent})`;
     const accentHover = `color-mix(in srgb, ${palette.accent} 82%, ${palette.foreground})`;
+    const accentText = accentForeground(palette);
+    const selectionText = selectionForeground(palette);
     return `
 @-moz-document url("about:logins"), url-prefix("chrome://browser/content/aboutlogins/"),
   url("about:translations"), url-prefix("chrome://global/content/translations/"),
@@ -147,6 +152,8 @@
   :root {
     color-scheme: ${palette.mode} !important;
     --omazen-accent: ${palette.accent} !important;
+    --omazen-accent-foreground: ${accentText} !important;
+    --omazen-selection-foreground: ${selectionText} !important;
     --omazen-background: ${palette.background} !important;
     --omazen-background-dark: ${palette.background_dark} !important;
     --omazen-background-light: ${palette.background_light} !important;

@@ -121,7 +121,8 @@ fi
 if grep -Fq -- 'zen-workspace[active]' "$CHROME_CSS"; then
   fail "active workspace container must not receive selection background"
 fi
-if grep -Fq -- '.zen-current-workspace-indicator' "$CHROME_CSS"; then
+if sed -n '/\.zen-current-workspace-indicator/,/}/p' "$CHROME_CSS" |
+  grep -Eq '^[[:space:]]*(padding|background)(-[[:alnum:]]+)*[[:space:]]*:'; then
   fail "workspace indicator must retain native padding and background"
 fi
 if sed -n '/:is(/,/)/p' "$CHROME_CSS" | grep -Fxq '  input'; then

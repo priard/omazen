@@ -18,6 +18,35 @@ export const COLOR_KEYS = Object.freeze([
 
 const PALETTE_KEYS = Object.freeze(["schema_version", "mode", ...COLOR_KEYS]);
 
+function relativeLuminance(color) {
+  const channels = [1, 3, 5].map(offset => Number.parseInt(color.slice(offset, offset + 2), 16) / 255);
+  const [red, green, blue] = channels.map(channel =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(first, second) {
+  const lighter = Math.max(relativeLuminance(first), relativeLuminance(second));
+  const darker = Math.min(relativeLuminance(first), relativeLuminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function surfaceForeground(palette, surface) {
+  return contrastRatio(surface, palette.foreground) >=
+    contrastRatio(surface, palette.background_dark)
+    ? palette.foreground
+    : palette.background_dark;
+}
+
+export function accentForeground(palette) {
+  return surfaceForeground(palette, palette.accent);
+}
+
+export function selectionForeground(palette) {
+  return surfaceForeground(palette, palette.selection);
+}
+
 export function validatePalette(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("palette must be a JSON object");
@@ -67,6 +96,8 @@ export function setRootPalette(root, palette, enabled) {
     for (const key of COLOR_KEYS) {
       root.style.removeProperty(`--omazen-${key.replaceAll("_", "-")}`);
     }
+    root.style.removeProperty("--omazen-accent-foreground");
+    root.style.removeProperty("--omazen-selection-foreground");
     return false;
   }
 
@@ -76,5 +107,7 @@ export function setRootPalette(root, palette, enabled) {
   for (const key of COLOR_KEYS) {
     root.style.setProperty(`--omazen-${key.replaceAll("_", "-")}`, palette[key]);
   }
+  root.style.setProperty("--omazen-accent-foreground", accentForeground(palette));
+  root.style.setProperty("--omazen-selection-foreground", selectionForeground(palette));
   return true;
 }

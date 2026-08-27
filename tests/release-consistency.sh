@@ -22,7 +22,7 @@ fail() {
 [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "VERSION is not semantic x.y.z"
 grep -Fqx -- "// @version        $VERSION" "$BRIDGE" || fail "bridge metadata version"
 grep -Fqx -- "  const VERSION = \"$VERSION\";" "$BRIDGE" || fail "bridge runtime version"
-grep -Fq -- "/$CHROME_CSS\";" "$BRIDGE" || fail "bridge chrome stylesheet URI"
+grep -Eq -- "/$CHROME_CSS(\?[^\"]+)?\";" "$BRIDGE" || fail "bridge chrome stylesheet URI"
 grep -Fq -- "/$CONTENT_CSS\";" "$BRIDGE" || fail "bridge content stylesheet URI"
 grep -Fq -- "/$CONTENT_CSS\";" "$CHILD" || fail "child actor stylesheet URI"
 grep -Fq -- 'Omazen/OmazenPalette.sys.mjs' "$BRIDGE" || fail "bridge shared palette module"

@@ -41,6 +41,26 @@ assert.equal(
   null,
   "shared actor validation should reject invalid colors",
 );
+assert.equal(
+  paletteModule.accentForeground({
+    ...initialPalette,
+    accent: "#4dd6c8",
+    foreground: "#cdd6ee",
+    background_dark: "#141a27",
+  }),
+  "#141a27",
+  "bright accents should receive the higher-contrast dark palette color",
+);
+assert.equal(
+  paletteModule.selectionForeground({
+    ...initialPalette,
+    selection: "#203060",
+    foreground: "#f0f4ff",
+    background_dark: "#101522",
+  }),
+  "#f0f4ff",
+  "dark selections should receive the higher-contrast light palette color",
+);
 
 class FakeFile {
   constructor(path = "") {
