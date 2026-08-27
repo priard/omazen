@@ -42,18 +42,30 @@ assert.equal(
   "shared actor validation should reject invalid colors",
 );
 assert.equal(
-  paletteModule.accentForeground({
-    ...initialPalette,
-    accent: "#4dd6c8",
-    foreground: "#cdd6ee",
-    background_dark: "#141a27",
+  paletteModule.contrastRatio("#000000", "#ffffff"),
+  21,
+  "shared contrast calculation should use the WCAG black/white ratio",
+);
+assert.equal(
+  paletteModule.deriveAccentForeground({
+    accent: "#56949f",
+    background_dark: "#ede7e1",
+    foreground: "#575279",
   }),
-  "#141a27",
-  "bright accents should receive the higher-contrast dark palette color",
+  "#000000",
+  "accent foreground should fall back to black for a light mid-tone accent",
+);
+assert.equal(
+  paletteModule.deriveAccentForeground({
+    accent: "#1e66f5",
+    background_dark: "#e3e4e8",
+    foreground: "#4c4f69",
+  }),
+  "#ffffff",
+  "accent foreground should fall back to white when black is insufficient",
 );
 assert.equal(
   paletteModule.selectionForeground({
-    ...initialPalette,
     selection: "#203060",
     foreground: "#f0f4ff",
     background_dark: "#101522",
@@ -196,6 +208,9 @@ const document = {
   getElementById(id) {
     return links.get(id) ?? null;
   },
+  querySelector() {
+    return null;
+  },
   querySelectorAll(selector) {
     if (selector === "browser") browserQueries += 1;
     return selector === "browser" ? [browser] : [];
@@ -205,6 +220,7 @@ const document = {
 let nextTimer = 1;
 const timeouts = new Map();
 const intervals = new Map();
+const intervalDelays = new Map();
 let unloadHandler;
 const window = {
   addEventListener(name, callback) {
@@ -212,13 +228,15 @@ const window = {
   },
   clearInterval(id) {
     intervals.delete(id);
+    intervalDelays.delete(id);
   },
   clearTimeout(id) {
     timeouts.delete(id);
   },
-  setInterval(callback) {
+  setInterval(callback, delay) {
     const id = nextTimer++;
     intervals.set(id, callback);
+    intervalDelays.set(id, delay);
     return id;
   },
   setTimeout(callback) {
@@ -310,7 +328,7 @@ const Services = {
     },
   },
   prefs: {
-    getBoolPref: (name, fallback) => prefs.get(name) ?? (name === "omazen.transitions.enabled" ? true : fallback),
+    getBoolPref: (name, fallback) => prefs.get(name) ?? fallback,
     setBoolPref(name, value) {
       prefs.set(name, value);
     },
@@ -346,18 +364,30 @@ const Ci = {
   nsIStyleSheetService: {},
 };
 
+let computedPrimary = "#112233";
+let watcherCallback = null;
+let watcherUnsubscribed = false;
+
 const source = fs.readFileSync(new URL("../zen/omazen-bridge.uc.js", import.meta.url), "utf8");
 vm.runInNewContext(source, {
   Cc,
   Ci,
   ChromeUtils: {
     importESModule(uri) {
-      assert.equal(
-        uri,
-        "chrome://userscripts/content/Omazen/OmazenPalette.sys.mjs",
-        "bridge should import only the shared palette module",
-      );
-      return paletteModule;
+      if (uri === "chrome://userscripts/content/Omazen/OmazenPalette.sys.mjs") {
+        return paletteModule;
+      }
+      if (uri === "chrome://userscripts/content/Omazen/OmazenWatcher.sys.mjs") {
+        return {
+          subscribePaletteWatcher(callback) {
+            watcherCallback = callback;
+            return () => {
+              watcherUnsubscribed = true;
+            };
+          },
+        };
+      }
+      assert.fail(`unexpected bridge module import: ${uri}`);
     },
   },
   Date,
@@ -371,7 +401,10 @@ vm.runInNewContext(source, {
   console,
   document,
   encodeURIComponent,
-  getComputedStyle: () => ({ getPropertyValue: () => "#112233" }),
+  getComputedStyle: () => ({
+    backgroundColor: "rgb(17,34,51)",
+    getPropertyValue: name => (name === "--zen-primary-color" ? computedPrimary : "#112233"),
+  }),
   window,
 }, { filename: "omazen-bridge.uc.js" });
 
@@ -379,8 +412,19 @@ assert.ok(files.has(`${stateRoot}/bridge.log.1`), "oversized log should rotate t
 assert.ok(files.has(`${stateRoot}/bridge.log`), "logging should continue in a fresh bridge.log");
 assert.equal(observers.length, 1, "bridge should install one internal-page observer");
 assert.equal(intervals.size, 1, "bridge should install one palette poll timer");
+assert.equal([...intervalDelays.values()][0], 250, "bridge should poll quickly until the watcher is ready");
+assert.equal(typeof watcherCallback, "function", "bridge should subscribe to palette watcher events");
+watcherCallback({ type: "ready", backend: "inotify" });
+assert.equal(intervals.size, 1, "watcher readiness should retain one fallback poll timer");
+assert.equal([...intervalDelays.values()][0], 5000, "ready watcher should reduce fallback polling frequency");
+assert.ok(logLines.some(line => line.includes("WATCHER_READY backend=inotify")), "watcher readiness should be logged");
 assert.equal(attributes.get("data-omazen-enabled"), "true", "initial palette should enable chrome");
 assert.equal(styleValues.get("--omazen-accent"), initialPalette.accent, "initial palette should style chrome");
+assert.equal(
+  styleValues.get("--omazen-accent-foreground"),
+  paletteModule.deriveAccentForeground(initialPalette),
+  "initial palette should derive an accessible accent foreground",
+);
 assert.equal(prefs.get("omazen.enabled"), true, "initial palette should enable actor preferences");
 assert.equal(styleSheetService.registered.size, 1, "initial palette should register the content sheet");
 assert.equal(
@@ -404,6 +448,21 @@ const generatedCss = decodeURIComponent(registeredSheet.slice(registeredSheet.in
 assert.match(generatedCss, /@-moz-document url\("about:logins"\)/, "sheet should scope internal pages");
 assert.match(generatedCss, /url-prefix\("https:\/\/"\)/, "sheet should scope web scrollbars");
 assert.match(generatedCss, /scrollbar-color: #aabbcc #334455/, "sheet should map scrollbar colors");
+assert.match(
+  generatedCss,
+  new RegExp(`--omazen-accent-foreground: ${paletteModule.deriveAccentForeground(initialPalette)} !important`),
+  "sheet should expose the derived accent foreground",
+);
+assert.match(
+  generatedCss,
+  new RegExp(`--button-text-color-primary: ${paletteModule.deriveAccentForeground(initialPalette)} !important`),
+  "sheet should use the derived accent foreground for primary buttons",
+);
+assert.match(
+  generatedCss,
+  new RegExp(`\\.toggle-group-input:checked \\+ \\.toggle-group-label \\{[\\s\\S]*color: ${paletteModule.deriveAccentForeground(initialPalette)} !important`),
+  "sheet should use the derived accent foreground for Print toggles",
+);
 assert.match(generatedCss, /--button-text-color-menu: var\(--omazen-action-text\)/, "sheet should map action text");
 assert.match(generatedCss, /\.toggle-group-input:checked \+ \.toggle-group-label/, "sheet should style Print orientation");
 assert.match(generatedCss, /#open-dialog-link/, "sheet should style the system-dialog link");
@@ -414,6 +473,11 @@ assert.deepEqual(
   ) } },
   "initial palette should be sent to matching internal actors",
 );
+const initialDiagnostic = timeouts.values().next().value;
+timeouts.clear();
+initialDiagnostic();
+assert.ok(logLines.some(line => line.includes("CHROME_CSS_APPLIED primary=#112233")), "initial CSS probe should pass");
+assert.ok(logLines.some(line => line.includes("profile=p")), "bridge diagnostics should identify the profile without logging its path");
 
 timeouts.clear();
 browserQueries = 0;
@@ -431,9 +495,17 @@ assert.equal(browserQueries, 1, "scheduled broadcast should scan browser element
 
 const poll = intervals.values().next().value;
 files.set(`${stateRoot}/disabled`, { size: 0 });
-poll();
+watcherCallback({ type: "change", leaf: "disabled", events: "CREATE" });
+let watcherSync = [...timeouts.values()].at(-1);
+timeouts.clear();
+watcherSync();
 assert.equal(attributes.has("data-omazen-enabled"), false, "disabled marker should clear chrome state");
 assert.equal(styleValues.has("--omazen-accent"), false, "disabled marker should clear palette variables");
+assert.equal(
+  styleValues.has("--omazen-accent-foreground"),
+  false,
+  "disabled marker should clear the derived accent foreground",
+);
 assert.equal(prefs.get("omazen.enabled"), false, "disabled marker should disable actor preferences");
 assert.equal(styleSheetService.registered.size, 0, "disabled marker should unregister content CSS");
 assert.deepEqual(sentMessages.at(-1), { name: "Omazen:Apply", payload: { enabled: false } });
@@ -442,23 +514,55 @@ const updatedPalette = { ...initialPalette, mode: "light", accent: "#abcdef" };
 paletteText = JSON.stringify(updatedPalette);
 files.set(`${stateRoot}/palette.json`, { size: paletteText.length, modified: 2 });
 files.delete(`${stateRoot}/disabled`);
-poll();
+const applicationsBeforeEnable = logLines.filter(line => line.includes("PALETTE_APPLIED")).length;
+watcherCallback({ type: "change", leaf: "palette.json", events: "MOVED_TO" });
+watcherSync = [...timeouts.values()].at(-1);
+timeouts.clear();
+watcherSync();
 assert.equal(attributes.get("data-omazen-mode"), "light", "re-enable should apply the new mode");
 assert.equal(styleValues.get("--omazen-accent"), "#abcdef", "re-enable should apply the new accent");
+assert.equal(
+  styleValues.get("--omazen-accent-foreground"),
+  paletteModule.deriveAccentForeground(updatedPalette),
+  "re-enable should recalculate the derived accent foreground",
+);
 assert.equal(prefs.get("omazen.enabled"), true, "re-enable should restore actor preferences");
 assert.equal(sentMessages.at(-1).payload.accent, "#abcdef", "updated palette should reach actors");
+assert.equal(
+  logLines.filter(line => line.includes("PALETTE_APPLIED")).length,
+  applicationsBeforeEnable + 1,
+  "re-enable with a regenerated palette should apply only the new palette",
+);
+computedPrimary = "#000000";
+let retryDiagnostic = [...timeouts.values()].at(-1);
+timeouts.clear();
+retryDiagnostic();
+assert.equal(timeouts.size, 1, "CSS diagnostic should retry after a transient mismatch");
+computedPrimary = "#abcdef";
+retryDiagnostic = timeouts.values().next().value;
+timeouts.clear();
+retryDiagnostic();
+assert.ok(logLines.some(line => line.includes("CHROME_CSS_APPLIED primary=#abcdef")), "CSS retry should recover after the stylesheet loads");
 
 paletteText = JSON.stringify({ ...updatedPalette, unexpected: true });
 files.set(`${stateRoot}/palette.json`, { size: paletteText.length, modified: 3 });
-poll();
+watcherCallback({ type: "change", leaf: "palette.json", events: "MOVED_TO" });
+watcherSync = [...timeouts.values()].at(-1);
+timeouts.clear();
+watcherSync();
 assert.equal(styleValues.get("--omazen-accent"), "#abcdef", "invalid updates should preserve the last palette");
 assert.ok(
   logLines.some(line => line.includes("[ERROR] palette contains missing or unknown keys")),
   "invalid updates should be logged",
 );
 
+watcherCallback({ type: "error", reason: "process-exited-1" });
+assert.equal([...intervalDelays.values()][0], 250, "watcher failure should restore the fast polling fallback");
+poll();
+
 unloadHandler();
 assert.equal(observers[0].disconnected, true, "unload should disconnect the observer");
 assert.equal(auxiliaryObserverRemoved, true, "unload should remove the auxiliary-window observer");
+assert.equal(watcherUnsubscribed, true, "unload should unsubscribe from the shared watcher");
 assert.equal(intervals.size, 0, "unload should clear the palette poll timer");
 assert.equal(timeouts.size, 0, "unload should clear pending broadcasts and diagnostic probes");

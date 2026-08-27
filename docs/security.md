@@ -18,8 +18,10 @@ chrome/utils/utils.sys.mjs
 chrome/JS/omazen-bridge.uc.js
 chrome/JS/Omazen/OmazenParent.sys.mjs
 chrome/JS/Omazen/OmazenChild.sys.mjs
-chrome/JS/Omazen/omazen-chrome-v1.1.1.css
-chrome/JS/Omazen/omazen-content-v1.1.1.css
+chrome/JS/Omazen/OmazenPalette.sys.mjs
+chrome/JS/Omazen/OmazenWatcher.sys.mjs
+chrome/JS/Omazen/omazen-chrome-v1.4.1.css
+chrome/JS/Omazen/omazen-content-v1.4.1.css
 ```
 
 Program-level files for the supported Zen package:
@@ -36,16 +38,28 @@ The first two may be reused from a compatible pre-existing fx-autoconfig install
 
 - No remote download, update or execution at runtime.
 - Dependencies are pinned by commit and SHA-256.
+- The visual CI job pins the Zen release version and verifies its SHA-256 before
+  extraction or execution; the archive's version metadata remains a separate
+  defense-in-depth check.
 - No `eval`, dynamic import path, local port, native-messaging host or page-exposed API.
+- The event watcher launches only the fixed `/usr/bin/inotifywait` executable
+  with fixed arguments and the private Omazen state directory. It does not use
+  a shell, listen on a local port or accept commands from page content.
 - Palette and log paths are fixed; JSON cannot select a path. Logging is bounded
   to the active `bridge.log` plus one rotated `bridge.log.1` archive.
 - JSON is size-limited and strictly validated before use.
 - Only normalized colors and mode cross the actor boundary.
 - The actor matches a fixed internal-page allowlist and the built-in DevTools chrome namespace, never ordinary web origins.
 - Most CSS is static and shipped with Omazen. For isolated Passwords, Print and DevTools processes, the eight strictly validated hex colors and validated mode are inserted into fixed, URL-scoped internal-page rules. The same generated user sheet contains a separate fixed rule for `http:`, `https:` and `file:` documents that can set only `scrollbar-color`; it provides no script, DOM access or page-exposed API. JSON cannot supply selectors, property names or URLs in either scope.
-- Logs contain timestamps, fixed event names, mode, accent and validation errors—not URLs, page titles, profile paths or browsing data.
+- Logs contain timestamps, fixed event names, mode, accent, a stable opaque
+  profile identifier and validation errors—not URLs, page titles, profile paths
+  or browsing data.
 - Logs rotate at 128 KiB.
 - Disable is live and uninstall is ownership/hash aware.
+- External palette-provider mode can skip the Omarchy hook, but it does not
+  bypass palette validation, fixed paths, loader integrity, or ownership
+  checks. The external provider must supply a trusted local `colors.toml` path
+  and invoke synchronization itself.
 
 ## Updates
 

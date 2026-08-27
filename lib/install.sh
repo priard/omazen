@@ -7,9 +7,33 @@ OMAZEN_PROFILE_FILES=(
   Omazen/OmazenParent.sys.mjs
   Omazen/OmazenChild.sys.mjs
   Omazen/OmazenPalette.sys.mjs
-  "Omazen/omazen-chrome-v${OMAZEN_VERSION}.css"
-  "Omazen/omazen-content-v${OMAZEN_VERSION}.css"
+  Omazen/OmazenWatcher.sys.mjs
 )
+
+# Releases before program-file ownership was fully recorded may leave this
+# exact Omazen preference drop-in installed without a manifest entry. Adopt
+# only byte-for-byte known historical variants; unknown files remain protected.
+OMAZEN_KNOWN_PREF_HASHES=(
+  c00f815b495394c0336b8cc8e8b980f25330b4fa2e555bc6db242885d8dc46fd
+  2baf2534230d8630230b7619755605d44c6b6f021d4a53562cf707476ff52777
+  4e94ffefa49485d8866c394e890621e8b08d52f56b508d350bb5372e4d34a492
+)
+
+adopt_known_omazen_prefs() {
+  local destination=$1
+  local destination_hash known_hash
+
+  [[ -f $destination && ! -L $destination ]] || return 0
+  manifest_has_path "$OMAZEN_PROGRAM_MANIFEST" "$destination" && return 0
+  destination_hash=$(sha256_file "$destination")
+  for known_hash in "${OMAZEN_KNOWN_PREF_HASHES[@]}"; do
+    if [[ $destination_hash == "$known_hash" ]]; then
+      record_owned_file "$OMAZEN_PROGRAM_MANIFEST" "$destination" "$destination_hash"
+      say "Adopted known Omazen preference file into ownership tracking: $destination"
+      return 0
+    fi
+  done
+}
 
 program_has_compatible_fx() {
   local config="$OMAZEN_ZEN_PROGRAM_DIR/config.js"
@@ -37,6 +61,7 @@ install_program_loader() {
     install_program_file "$vendor/program/config.js" "$config"
     install_program_file "$vendor/program/defaults/pref/config-prefs.js" "$prefs"
   fi
+  adopt_known_omazen_prefs "$omazen_prefs"
   install_program_file "$OMAZEN_ROOT/zen/omazen-prefs.js" "$omazen_prefs"
 }
 
@@ -85,6 +110,15 @@ install_omazen_profile_files() {
   for relative in "${OMAZEN_PROFILE_FILES[@]}"; do
     install_user_file "$OMAZEN_ROOT/zen/$relative" "$profile/chrome/JS/$relative"
   done
+  # Keep one stable source path in the repository so contributions survive
+  # releases, while retaining versioned installed URIs to defeat chrome://
+  # stylesheet caches after upgrades.
+  install_user_file \
+    "$OMAZEN_ROOT/zen/Omazen/omazen-chrome.css" \
+    "$profile/chrome/JS/Omazen/omazen-chrome-v${OMAZEN_VERSION}.css"
+  install_user_file \
+    "$OMAZEN_ROOT/zen/Omazen/omazen-content.css" \
+    "$profile/chrome/JS/Omazen/omazen-content-v${OMAZEN_VERSION}.css"
 }
 
 cleanup_obsolete_profile_styles() {
@@ -108,6 +142,7 @@ cleanup_obsolete_profile_styles() {
 }
 
 check_supported_install() {
+  platform_is_supported || die "unsupported platform: $(platform_summary); Omazen requires Omarchy Quattro (4.x)"
   [[ -d $OMAZEN_ZEN_PROGRAM_DIR ]] || die "supported Zen program directory not found: $OMAZEN_ZEN_PROGRAM_DIR"
   [[ -f $OMAZEN_ZEN_PROGRAM_DIR/application.ini ]] || die "Zen application.ini not found in supported installation"
   if [[ ${OMAZEN_SKIP_PACKAGE_CHECK:-0} != 1 ]]; then
@@ -120,8 +155,11 @@ setup_omazen() {
   local profile version
   local profiles=()
 
-  ensure_state_dir
   check_supported_install
+  if [[ ! -x /usr/bin/inotifywait ]]; then
+    warn "inotifywait is unavailable; Zen will retain the 250 ms polling fallback"
+  fi
+  ensure_state_dir
   version=$(detect_zen_version) || die "could not determine Zen version"
   version_at_least "$version" "1.20" || die "Zen $version is older than the minimum candidate version 1.20"
   mapfile -t profiles < <(zen_profiles)
@@ -135,8 +173,13 @@ setup_omazen() {
     cleanup_obsolete_profile_styles "$profile"
   done
 
-  install_theme_hook
+  if [[ $OMAZEN_SKIP_THEME_HOOK == 1 ]]; then
+    say "Skipping the Omarchy theme hook for an external palette provider."
+  else
+    install_theme_hook
+  fi
   sync_palette
+  persist_provider_config
   rm -f -- "$OMAZEN_DISABLED_FILE"
 
   say "Omazen setup complete for $profile_count profile(s)."
@@ -210,7 +253,9 @@ uninstall_omazen() {
     "$OMAZEN_DISABLED_FILE" \
     "$OMAZEN_PALETTE_FILE" \
     "$OMAZEN_BRIDGE_LOG" \
-    "$OMAZEN_BRIDGE_LOG_ARCHIVE"
+    "$OMAZEN_BRIDGE_LOG_ARCHIVE" \
+    "$OMAZEN_PROVIDER_MODE_FILE" \
+    "$OMAZEN_ACTIVE_COLORS_FILE"
   if (( leftovers == 0 )); then
     rm -f -- "$OMAZEN_HOOK_MANIFEST" "$OMAZEN_PROFILE_MANIFEST" "$OMAZEN_PROGRAM_MANIFEST"
     rmdir -- "$OMAZEN_OWNED_DIR" 2>/dev/null || true

@@ -4,6 +4,9 @@
 "use strict";
 
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const ACCENT_TEXT_CONTRAST = 4.5;
+const BLACK = "#000000";
+const WHITE = "#ffffff";
 
 export const COLOR_KEYS = Object.freeze([
   "accent",
@@ -16,36 +19,57 @@ export const COLOR_KEYS = Object.freeze([
   "border",
 ]);
 
-const PALETTE_KEYS = Object.freeze(["schema_version", "mode", ...COLOR_KEYS]);
-
-function relativeLuminance(color) {
-  const channels = [1, 3, 5].map(offset => Number.parseInt(color.slice(offset, offset + 2), 16) / 255);
-  const [red, green, blue] = channels.map(channel =>
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-  );
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+function channelLuminance(channel) {
+  const normalized = channel / 255;
+  return normalized <= 0.04045
+    ? normalized / 12.92
+    : ((normalized + 0.055) / 1.055) ** 2.4;
 }
 
-function contrastRatio(first, second) {
-  const lighter = Math.max(relativeLuminance(first), relativeLuminance(second));
-  const darker = Math.min(relativeLuminance(first), relativeLuminance(second));
-  return (lighter + 0.05) / (darker + 0.05);
+export function relativeLuminance(color) {
+  if (typeof color !== "string" || !COLOR_RE.test(color)) {
+    throw new Error("invalid color");
+  }
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  return 0.2126 * channelLuminance(red)
+    + 0.7152 * channelLuminance(green)
+    + 0.0722 * channelLuminance(blue);
 }
 
-function surfaceForeground(palette, surface) {
-  return contrastRatio(surface, palette.foreground) >=
-    contrastRatio(surface, palette.background_dark)
-    ? palette.foreground
-    : palette.background_dark;
+export function contrastRatio(first, second) {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (Math.max(firstLuminance, secondLuminance) + 0.05)
+    / (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
-export function accentForeground(palette) {
-  return surfaceForeground(palette, palette.accent);
+/*
+ * Select the text color for a primary accent surface without changing the
+ * provider-facing v1 palette contract. Existing semantic colors are preferred
+ * when they already pass; black or white is used only as a guaranteed fallback.
+ */
+function deriveSurfaceForeground(palette, surface) {
+  for (const candidate of [palette.background_dark, palette.foreground]) {
+    if (contrastRatio(surface, candidate) >= ACCENT_TEXT_CONTRAST) {
+      return candidate.toLowerCase();
+    }
+  }
+  return contrastRatio(surface, BLACK) >= contrastRatio(surface, WHITE)
+    ? BLACK
+    : WHITE;
+}
+
+export function deriveAccentForeground(palette) {
+  return deriveSurfaceForeground(palette, palette.accent);
 }
 
 export function selectionForeground(palette) {
-  return surfaceForeground(palette, palette.selection);
+  return deriveSurfaceForeground(palette, palette.selection);
 }
+
+const PALETTE_KEYS = Object.freeze(["schema_version", "mode", ...COLOR_KEYS]);
 
 export function validatePalette(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -107,7 +131,7 @@ export function setRootPalette(root, palette, enabled) {
   for (const key of COLOR_KEYS) {
     root.style.setProperty(`--omazen-${key.replaceAll("_", "-")}`, palette[key]);
   }
-  root.style.setProperty("--omazen-accent-foreground", accentForeground(palette));
+  root.style.setProperty("--omazen-accent-foreground", deriveAccentForeground(palette));
   root.style.setProperty("--omazen-selection-foreground", selectionForeground(palette));
   return true;
 }

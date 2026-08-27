@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name           Omazen privileged palette bridge
 // @description    Applies a validated local Omazen palette to Zen chrome and internal pages.
-// @version        1.1.1
+// @version        1.4.1
 // @author         Omazen contributors
 // @include        main
 // @WindowActor    Omazen
@@ -15,25 +15,29 @@
   "use strict";
 
   const POLL_MS = 250;
+  const WATCHER_SAFETY_POLL_MS = 5000;
+  const CSS_DIAGNOSTIC_DELAYS = Object.freeze([100, 250, 500, 1000]);
   const MAX_PALETTE_BYTES = 2048;
   const MAX_LOG_BYTES = 131072;
   const LOG_LEAF = "bridge.log";
   const LOG_ARCHIVE_LEAF = "bridge.log.1";
   const STYLE_ID = "omazen-chrome-style";
   const CONTENT_STYLE_ID = "omazen-content-style";
-  const VERSION = "1.1.1";
-  const STYLE_URI =
-    "chrome://userscripts/content/Omazen/omazen-chrome-v1.1.1.css?theme-aware-hover-contrast-9";
-  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.1.1.css";
+  const VERSION = "1.4.1";
+  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.4.1.css";
+  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.4.1.css";
   const {
     COLOR_KEYS,
-    accentForeground,
     actorPayload,
     selectionForeground,
+    deriveAccentForeground,
     setRootPalette,
     validatePalette,
   } = ChromeUtils.importESModule(
     "chrome://userscripts/content/Omazen/OmazenPalette.sys.mjs",
+  );
+  const { subscribePaletteWatcher } = ChromeUtils.importESModule(
+    "chrome://userscripts/content/Omazen/OmazenWatcher.sys.mjs",
   );
   const SPOTLIGHT_URI = "chrome://browser/content/spotlight.html";
   const COMMON_DIALOG_URI = "chrome://global/content/commonDialog.xhtml";
@@ -60,7 +64,26 @@
   let broadcastTimer = 0;
   let internalPageObserver = null;
   let pollTimer = 0;
+  let watcherSyncTimer = 0;
+  let watcherUnsubscribe = null;
+  let watcherReady = false;
   const diagnosticTimers = new Set();
+
+  function stableProfileId() {
+    try {
+      const path = Services.dirsvc.get("ProfD", Ci.nsIFile).path;
+      let hash = 2166136261;
+      for (let index = 0; index < path.length; index += 1) {
+        hash ^= path.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return `p${(hash >>> 0).toString(16).padStart(8, "0")}`;
+    } catch (_error) {
+      return "unknown";
+    }
+  }
+
+  const PROFILE_ID = stableProfileId();
 
   function stateDirectory() {
     const configured = Services.env.get("XDG_STATE_HOME");
@@ -140,9 +163,9 @@
   }
 
   function contentPaletteCss(palette) {
+    const accentForeground = deriveAccentForeground(palette);
     const hover = `color-mix(in srgb, ${palette.background_light} 82%, ${palette.accent})`;
     const accentHover = `color-mix(in srgb, ${palette.accent} 82%, ${palette.foreground})`;
-    const accentText = accentForeground(palette);
     const selectionText = selectionForeground(palette);
     return `
 @-moz-document url("about:logins"), url-prefix("chrome://browser/content/aboutlogins/"),
@@ -152,7 +175,7 @@
   :root {
     color-scheme: ${palette.mode} !important;
     --omazen-accent: ${palette.accent} !important;
-    --omazen-accent-foreground: ${accentText} !important;
+    --omazen-accent-foreground: ${accentForeground} !important;
     --omazen-selection-foreground: ${selectionText} !important;
     --omazen-background: ${palette.background} !important;
     --omazen-background-dark: ${palette.background_dark} !important;
@@ -175,7 +198,10 @@
     --button-background-color-ghost-hover: ${palette.background_light} !important;
     --button-text-color: ${palette.foreground} !important;
     --button-text-color-hover: ${palette.foreground} !important;
-    --button-text-color-primary: ${palette.background_dark} !important;
+    --button-text-color-primary: ${accentForeground} !important;
+    --button-text-color-primary-active: ${accentForeground} !important;
+    --button-text-color-primary-hover: ${accentForeground} !important;
+    --in-content-primary-button-text-color: ${accentForeground} !important;
     --button-text-color-ghost: var(--omazen-action-text) !important;
     --button-text-color-ghost-hover: var(--omazen-action-text) !important;
     --button-text-color-ghost-active: var(--omazen-action-text) !important;
@@ -269,7 +295,7 @@
   }
   .toggle-group-input:checked + .toggle-group-label {
     background-color: ${palette.accent} !important;
-    color: ${palette.background_dark} !important;
+    color: ${accentForeground} !important;
     border-color: ${palette.accent} !important;
   }
   #print :is(input[type="radio"], input[type="checkbox"]) {
@@ -330,6 +356,45 @@
       callback();
     }, delay);
     diagnosticTimers.add(timer);
+  }
+
+  function appendChromeStyleProbe() {
+    const styleProbe = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) return `${selector}=missing`;
+      const style = getComputedStyle(element);
+      const background = style.backgroundColor.replaceAll(" ", "");
+      const toolbar = style.getPropertyValue("--zen-toolbar-element-bg").trim().replaceAll(" ", "");
+      const base = style.getPropertyValue("--zen-urlbar-background-base").trim().replaceAll(" ", "");
+      return `${selector}=${background}|toolbar:${toolbar}|base:${base}`;
+    };
+    appendLog(
+      "INFO",
+      `CHROME_STYLE_PROBE ${styleProbe(".urlbar-background")} ${styleProbe(".urlbar-input-container")} ${styleProbe("#urlbar")} profile=${PROFILE_ID}`,
+    );
+  }
+
+  function scheduleChromeDiagnostic(palette, attempt = 0) {
+    const delay = CSS_DIAGNOSTIC_DELAYS[Math.min(attempt, CSS_DIAGNOSTIC_DELAYS.length - 1)];
+    scheduleDiagnostic(() => {
+      const primary = getComputedStyle(document.documentElement)
+        .getPropertyValue("--zen-primary-color")
+        .trim();
+      if (primary === palette.accent) {
+        appendLog("INFO", `CHROME_CSS_APPLIED primary=${primary} profile=${PROFILE_ID}`);
+        appendChromeStyleProbe();
+        return;
+      }
+      if (attempt + 1 < CSS_DIAGNOSTIC_DELAYS.length) {
+        scheduleChromeDiagnostic(palette, attempt + 1);
+        return;
+      }
+      appendLog(
+        "ERROR",
+        `chrome stylesheet did not expose the expected primary color expected=${palette.accent} observed=${primary || "missing"} profile=${PROFILE_ID}`,
+      );
+      appendChromeStyleProbe();
+    }, delay);
   }
 
   function isActorInternalUri(uri) {
@@ -435,40 +500,17 @@
     ensureChromeStyle();
     const root = document.documentElement;
     setRootPalette(root, palette, true);
-    root.style.setProperty(
-      "--omazen-transition-duration",
-      Services.prefs.getBoolPref("omazen.transitions.enabled", true) ? "180ms" : "0ms",
-    );
     currentPalette = palette;
     syncContentPaletteSheet(palette, true);
     writePalettePrefs(palette, true);
     broadcastToInternalPages(palette, true);
-    appendLog("INFO", `PALETTE_APPLIED accent=${palette.accent} mode=${palette.mode}`);
-    scheduleDiagnostic(() => {
-      const primary = getComputedStyle(root).getPropertyValue("--zen-primary-color").trim();
-      if (primary === palette.accent) appendLog("INFO", `CHROME_CSS_APPLIED primary=${primary}`);
-      else appendLog("ERROR", "chrome stylesheet did not expose the expected primary color");
-
-      const styleProbe = (selector) => {
-        const element = document.querySelector(selector);
-        if (!element) return `${selector}=missing`;
-        const style = getComputedStyle(element);
-        const background = style.backgroundColor.replaceAll(" ", "");
-        const toolbar = style.getPropertyValue("--zen-toolbar-element-bg").trim().replaceAll(" ", "");
-        const base = style.getPropertyValue("--zen-urlbar-background-base").trim().replaceAll(" ", "");
-        return `${selector}=${background}|toolbar:${toolbar}|base:${base}`;
-      };
-      appendLog(
-        "INFO",
-        `CHROME_STYLE_PROBE ${styleProbe(".urlbar-background")} ${styleProbe(".urlbar-input-container")} ${styleProbe("#urlbar")}`,
-      );
-    }, 100);
+    appendLog("INFO", `PALETTE_APPLIED accent=${palette.accent} mode=${palette.mode} profile=${PROFILE_ID}`);
+    scheduleChromeDiagnostic(palette);
   }
 
   function disablePalette() {
     const root = document.documentElement;
     setRootPalette(root, currentPalette, false);
-    root.style.removeProperty("--omazen-transition-duration");
     syncContentPaletteSheet(currentPalette, false);
     writePalettePrefs(currentPalette, false);
     broadcastToInternalPages(currentPalette, false);
@@ -477,27 +519,76 @@
   function sync() {
     const disabledFile = stateFile("disabled");
     const nextDisabled = disabledFile.exists();
+    let shouldReapplyCurrentPalette = false;
     if (nextDisabled !== disabledState) {
       disabledState = nextDisabled;
       if (disabledState) {
         disablePalette();
         appendLog("INFO", "DISABLED");
       } else if (currentPalette) {
-        applyPalette(currentPalette);
+        shouldReapplyCurrentPalette = true;
       }
     }
     if (disabledState) return;
 
     try {
       const file = stateFile("palette.json");
-      if (!file.exists() || !file.isFile()) return;
+      if (!file.exists() || !file.isFile()) {
+        if (shouldReapplyCurrentPalette) applyPalette(currentPalette);
+        return;
+      }
       const signature = `${file.lastModifiedTime}:${file.fileSize}`;
-      if (signature === paletteSignature) return;
+      if (signature === paletteSignature) {
+        if (shouldReapplyCurrentPalette) applyPalette(currentPalette);
+        return;
+      }
       paletteSignature = signature;
       const palette = validatePalette(JSON.parse(readText(file)));
       applyPalette(palette);
     } catch (error) {
       appendLog("ERROR", error.message);
+    }
+  }
+
+  function setPollInterval(delay) {
+    if (pollTimer) window.clearInterval(pollTimer);
+    pollTimer = window.setInterval(sync, delay);
+  }
+
+  function scheduleWatcherSync() {
+    if (watcherSyncTimer) return;
+    watcherSyncTimer = window.setTimeout(() => {
+      watcherSyncTimer = 0;
+      sync();
+    }, 0);
+  }
+
+  function handleWatcherEvent(event) {
+    if (event?.type === "ready") {
+      watcherReady = true;
+      setPollInterval(WATCHER_SAFETY_POLL_MS);
+      appendLog(
+        "INFO",
+        `WATCHER_READY backend=${event.backend} safety_poll_ms=${WATCHER_SAFETY_POLL_MS} profile=${PROFILE_ID}`,
+      );
+      sync();
+      return;
+    }
+    if (event?.type === "change") {
+      appendLog(
+        "INFO",
+        `WATCHER_EVENT leaf=${event.leaf} events=${event.events} profile=${PROFILE_ID}`,
+      );
+      scheduleWatcherSync();
+      return;
+    }
+    if (event?.type === "error") {
+      if (watcherReady) watcherReady = false;
+      setPollInterval(POLL_MS);
+      appendLog(
+        "WARN",
+        `WATCHER_FALLBACK reason=${event.reason || "unknown"} poll_ms=${POLL_MS} profile=${PROFILE_ID}`,
+      );
     }
   }
 
@@ -521,6 +612,10 @@
       internalPageObserver = null;
       if (broadcastTimer) window.clearTimeout(broadcastTimer);
       broadcastTimer = 0;
+      if (watcherSyncTimer) window.clearTimeout(watcherSyncTimer);
+      watcherSyncTimer = 0;
+      watcherUnsubscribe?.();
+      watcherUnsubscribe = null;
       if (pollTimer) window.clearInterval(pollTimer);
       pollTimer = 0;
       for (const timer of diagnosticTimers) window.clearTimeout(timer);
@@ -535,7 +630,8 @@
     childList: true,
     subtree: true,
   });
-  appendLog("INFO", `BRIDGE_LOADED version=${VERSION}`);
+  appendLog("INFO", `BRIDGE_LOADED version=${VERSION} profile=${PROFILE_ID}`);
   sync();
-  pollTimer = window.setInterval(sync, POLL_MS);
+  setPollInterval(POLL_MS);
+  watcherUnsubscribe = subscribePaletteWatcher(handleWatcherEvent);
 })();

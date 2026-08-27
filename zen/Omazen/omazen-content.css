@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* See NOTICE for the required Omazen project attribution terms. */
 
+/* Canonical source; installation adds the release version to prevent stale chrome:// caches. */
+
 :root[data-omazen-enabled="true"] {
   /* Semantic text roles. Firefox's moz-box-link maps enabled row actions
    * through the menu/ghost button chain, so raw muted text must not be used
@@ -8,6 +10,7 @@
   --omazen-action-text: var(--omazen-foreground);
   --omazen-secondary-text: color-mix(in srgb, var(--omazen-foreground-muted) 40%, var(--omazen-foreground));
   --omazen-disabled-text: var(--omazen-foreground-muted);
+  --omazen-accent-foreground: var(--omazen-background-dark);
   --background-color-canvas: var(--omazen-background) !important;
   --background-color-box: var(--omazen-background-dark) !important;
   --background-color-box-info: var(--omazen-background-light) !important;
@@ -27,9 +30,9 @@
   --button-text-color: var(--omazen-foreground) !important;
   --button-text-color-active: var(--omazen-foreground) !important;
   --button-text-color-hover: var(--omazen-foreground) !important;
-  --button-text-color-primary: var(--omazen-background-dark) !important;
-  --button-text-color-primary-active: var(--omazen-background-dark) !important;
-  --button-text-color-primary-hover: var(--omazen-background-dark) !important;
+  --button-text-color-primary: var(--omazen-accent-foreground) !important;
+  --button-text-color-primary-active: var(--omazen-accent-foreground) !important;
+  --button-text-color-primary-hover: var(--omazen-accent-foreground) !important;
   --button-background-color-ghost-hover: var(--omazen-background-light) !important;
   --button-text-color-ghost: var(--omazen-action-text) !important;
   --button-text-color-ghost-hover: var(--omazen-action-text) !important;
@@ -73,7 +76,7 @@
   --in-content-box-background-odd: var(--omazen-background-light) !important;
   --in-content-box-border-color: var(--omazen-border) !important;
   --in-content-primary-button-background: var(--omazen-accent) !important;
-  --in-content-primary-button-text-color: var(--omazen-background-dark) !important;
+  --in-content-primary-button-text-color: var(--omazen-accent-foreground) !important;
   --in-content-primary-button-background-hover: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
   --in-content-accent-color: var(--omazen-accent) !important;
   --in-content-focus-outline-color: var(--omazen-accent) !important;
@@ -218,13 +221,13 @@
 
 :root[data-omazen-enabled="true"] #commonDialog::part(omazen-primary-button) {
   background-color: var(--omazen-accent) !important;
-  color: var(--omazen-background-dark) !important;
+  color: var(--omazen-accent-foreground) !important;
   border-color: var(--omazen-accent) !important;
 }
 
 :root[data-omazen-enabled="true"] #commonDialog::part(omazen-primary-button):is(:hover, :focus-visible) {
   background-color: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
-  color: var(--omazen-background-dark) !important;
+  color: var(--omazen-accent-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] #commonDialog :is(
@@ -513,11 +516,4 @@
 :root[data-omazen-enabled="true"] ::selection {
   background-color: var(--omazen-selection) !important;
   color: var(--omazen-foreground) !important;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  :root[data-omazen-enabled="true"],
-  :root[data-omazen-enabled="true"] body {
-    transition: background-color 180ms ease, color 180ms ease !important;
-  }
 }

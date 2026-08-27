@@ -1,5 +1,45 @@
 # Release validation report
 
+## 1.4.1 maintenance release
+
+Omazen `1.4.1` separates stable repository stylesheet sources from their
+release-versioned installed paths. The repository contains only
+`omazen-chrome.css` and `omazen-content.css`; setup copied them to the two
+detected Zen profiles as `omazen-chrome-v1.4.1.css` and
+`omazen-content-v1.4.1.css`, then removed the owned `v1.4.0` profile copies.
+SHA-256 checks confirmed that both installed files were byte-identical to their
+canonical sources.
+
+The complete `tests/release-gate.sh` passed for `1.4.1`: pinned static analysis,
+release consistency, syntax, the 12-scenario disposable lifecycle suite,
+critical palette contrast checks, rendered-pixel smoke coverage and the real
+Zen integration sequence for dark/light palettes plus live disable/enable. The
+contrast checker retained its seven documented advisory warning groups and
+reported no critical failure.
+
+The local update was installed over `1.4.0` on Omarchy `4.0.1-1` with
+`zen-browser-bin 1.21.15b-1`. After a complete Zen restart, the bridge logged
+`BRIDGE_LOADED version=1.4.1`, `PALETTE_APPLIED`, `CHROME_CSS_APPLIED` and
+`WATCHER_READY backend=inotify` with no current error or watcher fallback.
+Both `omazen doctor` formats reported zero failures and zero warnings.
+
+## 1.3.1 maintenance release
+
+Date: 2026-08-25
+Release: Omazen `1.3.1`
+
+This maintenance release fixes the native XUL context-menu active-row state so
+its hover background and text use the Omazen selection and foreground palette
+instead of Zen's native blue highlight.
+
+The complete `tests/release-gate.sh` passed: static analysis, release
+consistency, all 12 disposable lifecycle scenarios, rendered-pixel smoke and
+whitespace checks. The real installation updated both detected Zen profiles,
+removed the owned `1.3.0` styles, retained the timestamped application backup,
+and synchronized the active palette. After a normal Zen restart, `omazen
+doctor --json` reported bridge `1.3.1` loaded with zero failures and zero
+warnings.
+
 ## 1.1.1 maintenance release
 
 Omazen `1.1.1` contains release automation, test and documentation updates,
@@ -56,6 +96,15 @@ Tools, web scrollbars, and real update/uninstall/clean-install exercises.
 | Dark palette | Osaka Jade: `mode=dark`, `accent=#509475`, `background=#111c18` |
 | Light palette | Catppuccin Latte: `mode=light`, `accent=#1e66f5`, `background=#eff1f5` |
 | Zen profiles | 2 profiles from the active `profiles.ini` |
+
+## Current compatibility environment
+
+Updated: 2026-08-25
+
+The system used for current compatibility checks has been updated from Omarchy
+`4.0.0-1` to Omarchy `4.0.1` (Quattro). The full live qualification above is
+historical and remains labeled with the version on which it was executed; the
+Zen, fx-autoconfig and Omazen runtime versions are unchanged.
 
 ## Combined functional matrix
 
@@ -118,15 +167,31 @@ tests/visual-smoke.sh
 It starts the installed `zen-browser` binary with a disposable profile,
 loads `tests/fixtures/visual-smoke.html`, captures a fixed `1000x768` viewport
 and checks the rendered pixels for the document surface, header, card, action
-button, input, scroll content and scrollbar thumb. This catches invalid or
-non-rendering color declarations that selector-presence checks cannot detect.
-It never uses the live profile or network. To retain the capture for review:
+button, input, scroll content and scrollbar thumb. It then invokes
+`tests/visual-integration.sh` when Wayland/Hyprland capture tools are available.
+That integration pass copies the production fx-autoconfig runtime into another
+disposable profile, boots a real Zen window on `about:preferences`, captures
+the browser chrome and Settings regions for dark/light palettes, exercises
+live palette changes plus disable/enable, verifies persisted palette
+preferences and compares captures with a bounded ImageMagick tolerance. It
+never uses the live profile or network. To retain the capture for review:
 
 ```bash
 OMAZEN_KEEP_VISUAL_OUTPUT=1 \
 OMAZEN_VISUAL_OUTPUT_DIR=/tmp/omazen-visual-capture \
   tests/visual-smoke.sh
 ```
+
+### Automated palette contrast check
+
+`node tests/contrast.mjs` scans all available Omarchy `colors.toml` files and
+uses the same WCAG relative-luminance implementation as the runtime-derived
+accent button foreground. Primary button text and selection text are enforced
+at 4.5:1; link, muted-text and scrollbar combinations are emitted as
+warnings until their surface-specific semantics are finalized. In CI without
+an Omarchy installation, two edge-case fixtures exercise both black and white
+accent foreground fallbacks. `--strict` promotes all warning groups to
+failures for a local accessibility audit.
 
 ## Reproduction checklist
 

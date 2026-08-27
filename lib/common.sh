@@ -13,6 +13,8 @@ OMAZEN_PALETTE_FILE="$OMAZEN_STATE_DIR/palette.json"
 OMAZEN_DISABLED_FILE="$OMAZEN_STATE_DIR/disabled"
 OMAZEN_BRIDGE_LOG="$OMAZEN_STATE_DIR/bridge.log"
 OMAZEN_BRIDGE_LOG_ARCHIVE="$OMAZEN_STATE_DIR/bridge.log.1"
+OMAZEN_PROVIDER_MODE_FILE="$OMAZEN_STATE_DIR/provider-mode"
+OMAZEN_ACTIVE_COLORS_FILE="$OMAZEN_STATE_DIR/active-colors"
 OMAZEN_OWNED_DIR="$OMAZEN_STATE_DIR/owned"
 OMAZEN_BACKUP_DIR="$OMAZEN_STATE_DIR/backups"
 OMAZEN_PROFILE_MANIFEST="$OMAZEN_OWNED_DIR/profile-files"
@@ -21,9 +23,91 @@ OMAZEN_HOOK_MANIFEST="$OMAZEN_OWNED_DIR/hook-files"
 OMAZEN_ZEN_CONFIG_DIR=${OMAZEN_ZEN_CONFIG_DIR:-"${XDG_CONFIG_HOME:-$OMAZEN_HOME_DIR/.config}/zen"}
 OMAZEN_ZEN_PROGRAM_DIR=${OMAZEN_ZEN_PROGRAM_DIR:-/opt/zen-browser-bin}
 OMAZEN_HOOKS_DIR=${OMAZEN_HOOKS_DIR:-"${XDG_CONFIG_HOME:-$OMAZEN_HOME_DIR/.config}/omarchy/hooks"}
-OMAZEN_ACTIVE_COLORS=${OMAZEN_ACTIVE_COLORS:-"${XDG_STATE_HOME:-$OMAZEN_HOME_DIR/.local/state}/omarchy/current/theme/colors.toml"}
+OMAZEN_OMARCHY_STATE_DIR="${XDG_STATE_HOME:-$OMAZEN_HOME_DIR/.local/state}/omarchy"
+OMAZEN_THEME_NAME_FILE="$OMAZEN_OMARCHY_STATE_DIR/current/theme.name"
+
+read_state_line() {
+  local source=$1
+  local value
+  [[ -f $source && ! -L $source ]] || return 1
+  IFS= read -r value <"$source" || true
+  [[ -n ${value:-} ]] || return 1
+  printf '%s\n' "$value"
+}
+
+if [[ ${OMAZEN_ACTIVE_COLORS+x} != x ]]; then
+  OMAZEN_ACTIVE_COLORS=$(read_state_line "$OMAZEN_ACTIVE_COLORS_FILE" 2>/dev/null || \
+    printf '%s\n' "$OMAZEN_OMARCHY_STATE_DIR/current/theme/colors.toml")
+fi
+if [[ ${OMAZEN_SKIP_THEME_HOOK+x} != x ]]; then
+  OMAZEN_SKIP_THEME_HOOK=$(read_state_line "$OMAZEN_PROVIDER_MODE_FILE" 2>/dev/null || printf '0\n')
+fi
+[[ $OMAZEN_SKIP_THEME_HOOK == 0 || $OMAZEN_SKIP_THEME_HOOK == 1 ]] || {
+  printf 'ERROR: OMAZEN_SKIP_THEME_HOOK must be 0 or 1\n' >&2
+  exit 1
+}
 OMAZEN_DATA_DIR=${OMAZEN_DATA_DIR:-"${XDG_DATA_HOME:-$OMAZEN_HOME_DIR/.local/share}/omazen"}
 OMAZEN_LOCAL_BIN_DIR=${OMAZEN_LOCAL_BIN_DIR:-"${XDG_BIN_HOME:-$OMAZEN_HOME_DIR/.local/bin}"}
+OMAZEN_OS_RELEASE_FILE=${OMAZEN_OS_RELEASE_FILE:-/etc/os-release}
+
+os_release_value() {
+  local key=$1
+  [[ -r $OMAZEN_OS_RELEASE_FILE ]] || return 1
+  awk -F= -v wanted="$key" '
+    $1 == wanted {
+      value = substr($0, index($0, "=") + 1)
+      sub(/^"/, "", value)
+      sub(/"$/, "", value)
+      sub(/^\047/, "", value)
+      sub(/\047$/, "", value)
+      print value
+      exit
+    }
+  ' "$OMAZEN_OS_RELEASE_FILE"
+}
+
+platform_id() {
+  os_release_value ID 2>/dev/null || printf 'unknown\n'
+}
+
+platform_name() {
+  local name
+  name=$(os_release_value PRETTY_NAME 2>/dev/null || true)
+  [[ -n $name ]] || name=$(os_release_value NAME 2>/dev/null || true)
+  printf '%s\n' "${name:-unknown}"
+}
+
+platform_version() {
+  local version
+  version=$(os_release_value VERSION_ID 2>/dev/null || true)
+  [[ -n $version ]] || version=$(os_release_value BUILD_ID 2>/dev/null || true)
+  printf '%s\n' "${version:-unknown}"
+}
+
+platform_major_version() {
+  local version
+  version=$(platform_version)
+  [[ $version =~ ^([0-9]+)([.]|$) ]] || return 1
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+platform_summary() {
+  local id name version
+  id=$(platform_id)
+  name=$(platform_name)
+  version=$(platform_version)
+  if [[ $version != unknown && $name != *"$version"* ]]; then
+    name="$name $version"
+  fi
+  printf '%s (%s)\n' "$name" "$id"
+}
+
+platform_is_supported() {
+  local id major
+  id=$(platform_id)
+  major=$(platform_major_version) || return 1
+  [[ $id == omarchy && $major == 4 ]]
+}
 
 say() {
   printf '%s\n' "$*"
@@ -50,6 +134,21 @@ ensure_state_dir() {
   umask 077
   mkdir -p -- "$OMAZEN_STATE_DIR" "$OMAZEN_OWNED_DIR" "$OMAZEN_BACKUP_DIR"
   chmod 700 "$OMAZEN_STATE_DIR" "$OMAZEN_OWNED_DIR" "$OMAZEN_BACKUP_DIR"
+}
+
+persist_provider_config() {
+  local temporary
+
+  ensure_state_dir
+  temporary=$(mktemp "$OMAZEN_STATE_DIR/.provider-mode.XXXXXX")
+  printf '%s\n' "$OMAZEN_SKIP_THEME_HOOK" >"$temporary"
+  chmod 600 "$temporary"
+  mv -f -- "$temporary" "$OMAZEN_PROVIDER_MODE_FILE"
+
+  temporary=$(mktemp "$OMAZEN_STATE_DIR/.active-colors.XXXXXX")
+  printf '%s\n' "$OMAZEN_ACTIVE_COLORS" >"$temporary"
+  chmod 600 "$temporary"
+  mv -f -- "$temporary" "$OMAZEN_ACTIVE_COLORS_FILE"
 }
 
 manifest_hash_for() {

@@ -7,14 +7,38 @@ The official Omazen compatibility contract is **Omarchy Quattro + the native Arc
 claims below apply only to that combination. Omazen does not claim support for
 other Zen packaging formats or for Firefox.
 
+`OMAZEN_ACTIVE_COLORS` together with `OMAZEN_SKIP_THEME_HOOK=1` is a narrow
+integration interface for external palette providers. It skips only the
+Omarchy hook; all browser, palette, ownership and diagnostic checks remain in
+effect. Using that interface does not make the external desktop environment
+part of Omazen's official support contract.
+
+After a successful `setup`, Omazen persists the provider mode and active colors
+path under its state directory. Explicit environment variables override the
+persisted values for that invocation. External providers still own the timing
+of subsequent `omazen sync` calls.
+
+The event-driven path uses the fixed `/usr/bin/inotifywait` binary supplied by
+`inotify-tools`. Its absence does not break palette synchronization: the bridge
+logs `WATCHER_FALLBACK` and retains the previous 250 ms polling path. This
+watcher behavior is independent of `OMAZEN_SKIP_THEME_HOOK`; an external
+provider that invokes `omazen sync` produces the same atomic event as the
+Omarchy hook.
+
 ## Compatibility contract
 
 | Target | Contract |
 |---|---|
-| Omarchy 4.0.0 / Quattro | Supported; full validation 2026-08-24 |
+| Omarchy 4.0.1 / Quattro | Supported; current tested environment 2026-08-25 |
+| Omarchy 3.x and earlier | Incompatible; rejected by `omazen setup` and `omazen doctor` |
 | `zen-browser-bin 1.21.15b-1` | Supported; full validation 2026-08-24 |
 | Native `zen-browser-bin` Zen >= 1.20 | Compatibility candidate; `omazen doctor` warns unless it is the fully validated version above |
 | Native Zen < 1.20 | Rejected by `omazen setup` and `omazen doctor` |
+
+The full live qualification recorded below was performed on Omarchy `4.0.0-1`.
+After the system update, Omarchy `4.0.1` is the current tested Quattro
+environment; the validated Zen, fx-autoconfig and Omazen runtime versions are
+unchanged.
 
 The only fully validated Zen version in this release is `1.21.15b` (package
 `1.21.15b-1`). The candidate range is native `zen-browser-bin` Zen `>=1.20`;
@@ -66,5 +90,6 @@ Zen-specific selectors and `--zen-*` variables are not a stable public API. The 
 
 - Browser chrome, URL bar, tabs, sidebar, workspace controls, popups, split containers, Glance containers and relevant internal pages are targeted.
 - Ordinary website content is deliberately not recolored; only vertical and horizontal scrollbar colors are mapped to the active palette.
+- A web page's `<select>` dropdown is content UI even though Firefox renders it as a chrome `menupopup`. It keeps Zen's stock palette so it continues to follow the page's own color scheme.
 - Zen Boost storage is deliberately not mutated.
 - No WebExtension/native-messaging alternative is shipped because the privileged backend has proven reliable and the alternate backend has not demonstrated equivalent Zen-specific coverage.

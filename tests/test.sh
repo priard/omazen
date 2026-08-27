@@ -6,8 +6,8 @@ set -euo pipefail
 
 PROJECT_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 OMAZEN_VERSION=$(<"$PROJECT_ROOT/VERSION")
-CHROME_CSS="$PROJECT_ROOT/zen/Omazen/omazen-chrome-v${OMAZEN_VERSION}.css"
-CONTENT_CSS="$PROJECT_ROOT/zen/Omazen/omazen-content-v${OMAZEN_VERSION}.css"
+CHROME_CSS="$PROJECT_ROOT/zen/Omazen/omazen-chrome.css"
+CONTENT_CSS="$PROJECT_ROOT/zen/Omazen/omazen-content.css"
 TEST_ROOT=$(mktemp -d /tmp/omazen-tests.XXXXXX)
 
 cleanup() {
@@ -46,10 +46,26 @@ FAKE_PROFILE="$FAKE_CONFIG/abc.Test Profile"
 FAKE_STATE="$FAKE_HOME/.local/state/omazen"
 FAKE_HOOKS="$FAKE_HOME/.config/omarchy/hooks"
 FAKE_COLORS="$FAKE_HOME/.local/state/omarchy/current/theme/colors.toml"
+FAKE_OS_RELEASE="$TEST_ROOT/os-release"
+FAKE_OLD_OS_RELEASE="$TEST_ROOT/os-release-v3"
 
 mkdir -p "$FAKE_ZEN/defaults/pref" "$FAKE_PROFILE/chrome" "$(dirname -- "$FAKE_COLORS")"
 printf '[App]\nVersion=1.21.15b\n' >"$FAKE_ZEN/application.ini"
 printf '[Profile0]\nName=Test\nIsRelative=1\nPath=abc.Test Profile\nDefault=1\n' >"$FAKE_CONFIG/profiles.ini"
+cat >"$FAKE_OS_RELEASE" <<'EOF'
+NAME="Omarchy"
+PRETTY_NAME="Omarchy"
+ID=omarchy
+VERSION_ID="4.0.1"
+BUILD_ID="4.0.1"
+EOF
+cat >"$FAKE_OLD_OS_RELEASE" <<'EOF'
+NAME="Omarchy"
+PRETTY_NAME="Omarchy"
+ID=omarchy
+VERSION_ID="3.8.4"
+BUILD_ID="3.8.4"
+EOF
 printf 'keep-user-chrome\n' >"$FAKE_PROFILE/chrome/userChrome.css"
 printf 'keep-user-js\n' >"$FAKE_PROFILE/user.js"
 cp "$FAKE_PROFILE/chrome/userChrome.css" "$TEST_ROOT/userChrome.before"
@@ -90,6 +106,38 @@ run_omazen() {
   OMAZEN_ZEN_PROGRAM_DIR="$FAKE_ZEN" \
   OMAZEN_HOOKS_DIR="$FAKE_HOOKS" \
   OMAZEN_ACTIVE_COLORS="$FAKE_COLORS" \
+  OMAZEN_OS_RELEASE_FILE="$FAKE_OS_RELEASE" \
+  "$PROJECT_ROOT/bin/omazen" "$@"
+}
+
+run_omazen_with_os_release() {
+  local os_release=$1
+  shift
+  OMAZEN_TESTING=1 \
+  OMAZEN_SKIP_PACKAGE_CHECK=1 \
+  OMAZEN_HOME_DIR="$FAKE_HOME" \
+  OMAZEN_STATE_DIR="$FAKE_STATE" \
+  OMAZEN_ZEN_CONFIG_DIR="$FAKE_CONFIG" \
+  OMAZEN_ZEN_PROGRAM_DIR="$FAKE_ZEN" \
+  OMAZEN_HOOKS_DIR="$FAKE_HOOKS" \
+  OMAZEN_ACTIVE_COLORS="$FAKE_COLORS" \
+  OMAZEN_OS_RELEASE_FILE="$os_release" \
+  "$PROJECT_ROOT/bin/omazen" "$@"
+}
+
+run_external_omazen() {
+  OMAZEN_SKIP_THEME_HOOK=1 run_omazen "$@"
+}
+
+run_persisted_omazen() {
+  OMAZEN_TESTING=1 \
+  OMAZEN_SKIP_PACKAGE_CHECK=1 \
+  OMAZEN_HOME_DIR="$FAKE_HOME" \
+  OMAZEN_STATE_DIR="$FAKE_STATE" \
+  OMAZEN_ZEN_CONFIG_DIR="$FAKE_CONFIG" \
+  OMAZEN_ZEN_PROGRAM_DIR="$FAKE_ZEN" \
+  OMAZEN_HOOKS_DIR="$FAKE_HOOKS" \
+  OMAZEN_OS_RELEASE_FILE="$FAKE_OS_RELEASE" \
   "$PROJECT_ROOT/bin/omazen" "$@"
 }
 
@@ -101,10 +149,61 @@ assert_file "$FAKE_ZEN/defaults/pref/omazen-prefs.js"
 assert_file "$FAKE_PROFILE/chrome/JS/omazen-bridge.uc.js"
 assert_file "$FAKE_PROFILE/chrome/JS/Omazen/OmazenChild.sys.mjs"
 assert_file "$FAKE_PROFILE/chrome/JS/Omazen/OmazenPalette.sys.mjs"
+assert_file "$FAKE_PROFILE/chrome/JS/Omazen/OmazenWatcher.sys.mjs"
 assert_file "$FAKE_PROFILE/chrome/JS/Omazen/omazen-chrome-v${OMAZEN_VERSION}.css"
 assert_file "$FAKE_PROFILE/chrome/JS/Omazen/omazen-content-v${OMAZEN_VERSION}.css"
+assert_same_hash \
+  "$FAKE_PROFILE/chrome/JS/Omazen/omazen-chrome-v${OMAZEN_VERSION}.css" \
+  "$CHROME_CSS"
+assert_same_hash \
+  "$FAKE_PROFILE/chrome/JS/Omazen/omazen-content-v${OMAZEN_VERSION}.css" \
+  "$CONTENT_CSS"
 assert_file "$FAKE_HOOKS/theme-set.d/theme-set"
-grep -Fq "Omazen: $OMAZEN_VERSION" <(run_omazen status) || fail "reported package version"
+status_output=$(run_omazen status)
+grep -Fq "Omazen: $OMAZEN_VERSION" <<<"$status_output" || fail "reported package version"
+grep -Fq 'OS: Omarchy 4.0.1 (omarchy)' <<<"$status_output" || fail "reported supported platform"
+doctor_output=$(run_omazen doctor)
+grep -Fq '[PASS] supported platform: Omarchy 4.0.1 (omarchy)' <<<"$doctor_output" || \
+  fail "doctor reported supported platform"
+pass "status and doctor report the supported platform"
+
+doctor_json=$(run_omazen doctor --json)
+printf '%s\n' "$doctor_json" | node -e '
+  const fs = require("node:fs");
+  const report = JSON.parse(fs.readFileSync(0, "utf8"));
+  if (!report.ok || report.provider !== "omarchy-hook" || !Array.isArray(report.checks)) process.exit(1);
+' || fail "doctor JSON report shape"
+pass "doctor emits a structured JSON report"
+
+doctor_v3_output=$(run_omazen_with_os_release "$FAKE_OLD_OS_RELEASE" doctor 2>&1 || true)
+grep -Fq '[FAIL] unsupported platform: Omarchy 3.8.4 (omarchy); supported platform is Omarchy Quattro (4.x)' <<<"$doctor_v3_output" || \
+  fail "doctor did not reject Omarchy 3"
+
+V3_HOME="$TEST_ROOT/v3-home"
+V3_ZEN="$TEST_ROOT/v3-zen-program"
+V3_CONFIG="$V3_HOME/.config/zen"
+V3_PROFILE="$V3_CONFIG/abc.Test"
+V3_STATE="$V3_HOME/.local/state/omazen"
+V3_HOOKS="$V3_HOME/.config/omarchy/hooks"
+V3_COLORS="$V3_HOME/.config/omarchy/current/theme/colors.toml"
+mkdir -p "$V3_ZEN/defaults/pref" "$V3_PROFILE/chrome" "$(dirname -- "$V3_COLORS")"
+printf '[App]\nVersion=1.21.15b\n' >"$V3_ZEN/application.ini"
+printf '[Profile0]\nName=Test\nIsRelative=1\nPath=abc.Test\nDefault=1\n' >"$V3_CONFIG/profiles.ini"
+cp "$FAKE_COLORS" "$V3_COLORS"
+if OMAZEN_TESTING=1 OMAZEN_SKIP_PACKAGE_CHECK=1 \
+  OMAZEN_HOME_DIR="$V3_HOME" OMAZEN_STATE_DIR="$V3_STATE" \
+  OMAZEN_ZEN_CONFIG_DIR="$V3_CONFIG" OMAZEN_ZEN_PROGRAM_DIR="$V3_ZEN" \
+  OMAZEN_HOOKS_DIR="$V3_HOOKS" OMAZEN_ACTIVE_COLORS="$V3_COLORS" \
+  OMAZEN_OS_RELEASE_FILE="$FAKE_OLD_OS_RELEASE" \
+  "$PROJECT_ROOT/bin/omazen" setup >/dev/null 2>&1; then
+  fail "setup accepted Omarchy 3"
+fi
+assert_absent "$V3_ZEN/config.js"
+assert_absent "$V3_PROFILE/chrome/JS/omazen-bridge.uc.js"
+assert_absent "$V3_HOOKS/theme-set.d/theme-set"
+assert_absent "$V3_STATE"
+pass "Omarchy 3 is rejected before setup changes"
+
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "palette mode mapping"
 grep -Fq '"background_dark": "#eeeeee"' "$FAKE_STATE/palette.json" || fail "palette background mapping"
 grep -Fq -- '--zen-urlbar-background-base: var(--omazen-background-light)' \
@@ -115,6 +214,33 @@ grep -Fq -- '--zen-urlbar-background-transparent: var(--omazen-background-light)
   "$CHROME_CSS" || fail "expanded URL bar background"
 grep -Fq -- '#urlbar:is([focused="true"], [breakout-extend]) .urlbar-background' \
   "$CHROME_CSS" || fail "focused URL bar outline"
+grep -Fq -- ':not([zen-compact-mode="true"]) #navigator-toolbox' \
+  "$CHROME_CSS" || fail "non-compact toolbox palette"
+grep -Fq -- '[zen-compact-mode="true"] .zen-toolbar-background' \
+  "$CHROME_CSS" || fail "compact rounded background palette"
+grep -Fq -- '--zen-navigator-toolbox-background: transparent' \
+  "$CHROME_CSS" || fail "compact rectangular toolbox transparency"
+if grep -Fxq -- '  #navigator-toolbox,' "$CHROME_CSS"; then
+  fail "compact rectangular toolbox must remain transparent"
+fi
+COMPACT_BACKGROUND_RULE=$(sed -n \
+  '/\[zen-compact-mode="true"\] \.zen-toolbar-background {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-background) !important;' \
+  <<< "$COMPACT_BACKGROUND_RULE" || fail "compact rounded background palette"
+grep -Fq -- 'box-shadow: none !important;' \
+  <<< "$COMPACT_BACKGROUND_RULE" || fail "compact rounded background shadow removal"
+grep -Fq -- 'outline: none !important;' \
+  <<< "$COMPACT_BACKGROUND_RULE" || fail "compact rounded background outline removal"
+COMPACT_FRAME_RULE=$(sed -n \
+  '/\[zen-compact-mode="true"\] #navigator-toolbox:not(\[animate="true"\]) {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-background) !important;' \
+  <<< "$COMPACT_FRAME_RULE" || fail "compact toolbox transparent gap fill"
+grep -Fq -- 'border: 2px solid ' \
+  <<< "$COMPACT_FRAME_RULE" || fail "compact toolbox flat border"
+grep -Fq -- 'border-radius:' \
+  <<< "$COMPACT_FRAME_RULE" || fail "compact toolbox rounded border"
 if grep -Fq -- '#urlbar-background' "$CHROME_CSS"; then
   fail "obsolete URL bar background ID selector"
 fi
@@ -128,6 +254,14 @@ fi
 if sed -n '/:is(/,/)/p' "$CHROME_CSS" | grep -Fxq '  input'; then
   fail "generic input selector must not repaint the URL text field"
 fi
+grep -Fq -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
+  "$CHROME_CSS" || fail "context menu hover selector"
+grep -A3 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
+  "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-selection)' || \
+  fail "context menu hover background palette"
+grep -A4 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
+  "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground)' || \
+  fail "context menu hover text palette"
 grep -Fq -- '--background-color-canvas: var(--omazen-background)' \
   "$CONTENT_CSS" || fail "Settings canvas palette"
 grep -Fq -- '--input-text-background-color: var(--omazen-background-dark)' \
@@ -186,6 +320,12 @@ grep -Fq -- '--omazen-secondary-text: color-mix(in srgb, var(--omazen-foreground
   "$CONTENT_CSS" || fail "readable secondary text role"
 grep -Fq -- '--button-text-color-ghost: var(--omazen-action-text)' \
   "$CONTENT_CSS" || fail "enabled ghost action text palette"
+grep -Fq -- '--omazen-accent-foreground: var(--omazen-background-dark)' \
+  "$CONTENT_CSS" || fail "accent foreground fallback token"
+grep -Fq -- '--button-text-color-primary: var(--omazen-accent-foreground)' \
+  "$CONTENT_CSS" || fail "primary button contrast token"
+grep -Fq -- '--in-content-primary-button-text-color: var(--omazen-accent-foreground)' \
+  "$CONTENT_CSS" || fail "in-content primary button contrast token"
 grep -Fq -- '--button-text-color-menu-active: var(--omazen-action-text)' \
   "$CONTENT_CSS" || fail "active menu action text palette"
 grep -Fq -- '--box-button-text-color-disabled: var(--omazen-disabled-text)' \
@@ -216,6 +356,9 @@ grep -Fq -- '#aboutDialogContainer button' \
   "$CHROME_CSS" || fail "About Zen button palette"
 grep -Fq -- 'notification-message .notification-button.primary' \
   "$CHROME_CSS" || fail "notification primary button palette"
+grep -A4 -F -- 'notification-message .notification-button.primary {' \
+  "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-accent-foreground)' || \
+  fail "notification primary button contrast token"
 grep -Fq -- 'chrome://browser/content/spotlight.html' \
   "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "Spotlight WindowActor match"
 grep -Fq -- ':root#places[data-omazen-enabled="true"] #placesList' \
@@ -238,9 +381,79 @@ grep -Fq -- 'body[data-page="spotlight"]' \
   "$CONTENT_CSS" || fail "Spotlight surface palette"
 grep -Fq -- '#commonDialog::part(omazen-primary-button)' \
   "$CONTENT_CSS" || fail "common dialog primary button palette"
-grep -Fq -- '--button-text-color-primary: var(--omazen-background-dark)' \
+grep -A4 -F -- '#commonDialog::part(omazen-primary-button) {' \
+  "$CONTENT_CSS" | grep -Fq -- 'color: var(--omazen-accent-foreground)' || \
+  fail "common dialog primary button contrast token"
+grep -Fq -- '--button-text-color-primary: var(--omazen-accent-foreground)' \
   "$CONTENT_CSS" || fail "Spotlight primary button contrast"
 pass "setup installs the isolated runtime and maps Quattro colors"
+
+cat >"$FAKE_ZEN/defaults/pref/omazen-prefs.js" <<'EOF'
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* See NOTICE for the required Omazen project attribution terms. */
+
+// Omazen-owned preference drop-in. Removed by `omazen uninstall` when owned.
+pref("userChromeJS.experimental.enabled", true);
+pref("omazen.transitions.enabled", true);
+EOF
+awk -F '|' -v wanted="$FAKE_ZEN/defaults/pref/omazen-prefs.js" \
+  '$1 != wanted' "$FAKE_STATE/owned/program-files" >"$TEST_ROOT/program-files-without-prefs"
+mv -- "$TEST_ROOT/program-files-without-prefs" "$FAKE_STATE/owned/program-files"
+legacy_upgrade_output=$(run_omazen setup)
+grep -Fq 'Adopted known Omazen preference file into ownership tracking' \
+  <<<"$legacy_upgrade_output" || fail "known legacy preference file was not adopted"
+assert_same_hash "$FAKE_ZEN/defaults/pref/omazen-prefs.js" "$PROJECT_ROOT/zen/omazen-prefs.js"
+grep -Fq "$FAKE_ZEN/defaults/pref/omazen-prefs.js|" \
+  "$FAKE_STATE/owned/program-files" || fail "adopted preference file was not recorded"
+pass "setup safely adopts a known legacy Omazen preference file"
+
+UNKNOWN_PREF_ROOT="$TEST_ROOT/unknown-pref-program"
+mkdir -p "$UNKNOWN_PREF_ROOT/defaults/pref"
+printf '[App]\nVersion=1.21.15b\n' >"$UNKNOWN_PREF_ROOT/application.ini"
+cp "$PROJECT_ROOT/vendor/fx-autoconfig/program/config.js" "$UNKNOWN_PREF_ROOT/config.js"
+cp "$PROJECT_ROOT/vendor/fx-autoconfig/program/defaults/pref/config-prefs.js" \
+  "$UNKNOWN_PREF_ROOT/defaults/pref/config-prefs.js"
+printf 'foreign preference file\n' >"$UNKNOWN_PREF_ROOT/defaults/pref/omazen-prefs.js"
+if OMAZEN_TESTING=1 OMAZEN_SKIP_PACKAGE_CHECK=1 OMAZEN_HOME_DIR="$FAKE_HOME" \
+  OMAZEN_STATE_DIR="$TEST_ROOT/unknown-pref-state" OMAZEN_PROFILE="$FAKE_PROFILE" \
+  OMAZEN_ZEN_CONFIG_DIR="$FAKE_CONFIG" OMAZEN_ZEN_PROGRAM_DIR="$UNKNOWN_PREF_ROOT" \
+  OMAZEN_HOOKS_DIR="$FAKE_HOOKS" OMAZEN_ACTIVE_COLORS="$FAKE_COLORS" \
+  OMAZEN_OS_RELEASE_FILE="$FAKE_OS_RELEASE" \
+  "$PROJECT_ROOT/bin/omazen" setup >/dev/null 2>&1; then
+  fail "setup adopted an unknown unowned preference file"
+fi
+grep -Fqx 'foreign preference file' "$UNKNOWN_PREF_ROOT/defaults/pref/omazen-prefs.js" || \
+  fail "unknown unowned preference file was modified"
+pass "setup continues to reject unknown unowned preference files"
+
+
+rm -f -- "$FAKE_HOOKS/theme-set.d/theme-set"
+run_external_omazen setup >/dev/null
+assert_absent "$FAKE_HOOKS/theme-set.d/theme-set"
+assert_file "$FAKE_PROFILE/chrome/JS/Omazen/OmazenWatcher.sys.mjs"
+run_external_omazen doctor >/dev/null
+assert_file "$FAKE_STATE/provider-mode"
+grep -Fqx '1' "$FAKE_STATE/provider-mode" || fail "external provider mode was not persisted"
+assert_file "$FAKE_STATE/active-colors"
+grep -Fqx "$FAKE_COLORS" "$FAKE_STATE/active-colors" || fail "external palette source was not persisted"
+persisted_external_doctor=$(run_persisted_omazen doctor)
+grep -Fq '[PASS] external palette provider mode (Omarchy hook not required)' <<<"$persisted_external_doctor" || \
+  fail "doctor did not restore the persisted external provider mode"
+grep -Fq "[PASS] active palette source: $FAKE_COLORS" <<<"$persisted_external_doctor" || \
+  fail "doctor did not restore the persisted external palette source"
+persisted_external_sync=$(run_persisted_omazen sync)
+grep -Fq 'Palette synchronized atomically' <<<"$persisted_external_sync" || \
+  fail "sync did not use the persisted external palette source"
+persisted_external_json=$(run_persisted_omazen doctor --json)
+printf '%s\n' "$persisted_external_json" | node -e '
+  const fs = require("node:fs");
+  const report = JSON.parse(fs.readFileSync(0, "utf8"));
+  if (!report.ok || report.provider !== "external") process.exit(1);
+' || fail "doctor JSON did not report the persisted external provider"
+if OMAZEN_SKIP_THEME_HOOK=invalid run_omazen status >/dev/null 2>&1; then
+  fail "invalid external palette mode was accepted"
+fi
+pass "external palette providers can skip the Omarchy theme hook"
 
 MISSING_FX_UTIL="$FAKE_PROFILE/chrome/utils/utils.sys.mjs"
 rm -f -- "$MISSING_FX_UTIL"
@@ -308,6 +521,14 @@ if doctor_output=$(run_omazen doctor 2>&1); then
 fi
 grep -Fq 'normalized palette is missing, invalid, or stale' <<<"$doctor_output" || \
   fail "doctor did not identify the stale normalized palette"
+grep -Fq 'accent mismatch:' <<<"$doctor_output" || \
+  fail "doctor did not explain the stale palette mismatch"
+doctor_json=$(run_omazen doctor --json || true)
+printf '%s\n' "$doctor_json" | node -e '
+  const fs = require("node:fs");
+  const report = JSON.parse(fs.readFileSync(0, "utf8"));
+  if (report.ok || report.failures < 1 || !report.checks.some(check => check.status === "FAIL" && check.message.includes("accent mismatch"))) process.exit(1);
+' || fail "doctor JSON did not preserve detailed failure diagnostics"
 cp "$TEST_ROOT/colors.doctor-before" "$FAKE_COLORS"
 
 printf '%s\n' '2026-08-24T09:59:00.000Z [INFO] BRIDGE_LOADED version=0.9.0' \
@@ -363,6 +584,9 @@ pass "disable removes Shadow DOM styles and observers"
 node "$PROJECT_ROOT/tests/bridge-regressions.mjs" || fail "JavaScript bridge regression"
 pass "bridge filters mutations, rotates logs, and cleans up runtime resources"
 
+node "$PROJECT_ROOT/tests/watcher-regressions.mjs" || fail "JavaScript watcher regression"
+pass "shared inotify watcher filters events and broadcasts updates"
+
 FOREIGN_PROFILE="$TEST_ROOT/foreign-profile"
 FOREIGN_PROFILE_STATE="$TEST_ROOT/foreign-profile-state"
 mkdir -p "$FOREIGN_PROFILE/chrome/utils"
@@ -381,6 +605,7 @@ pass "setup rejects an unowned partial fx-autoconfig profile runtime"
 
 run_omazen uninstall >/dev/null
 assert_absent "$FAKE_PROFILE/chrome/JS/omazen-bridge.uc.js"
+assert_absent "$FAKE_PROFILE/chrome/JS/Omazen/OmazenWatcher.sys.mjs"
 assert_absent "$FAKE_STATE/bridge.log.1"
 assert_absent "$FAKE_ZEN/defaults/pref/omazen-prefs.js"
 assert_same_hash "$FAKE_PROFILE/chrome/userChrome.css" "$TEST_ROOT/userChrome.before"
@@ -467,4 +692,18 @@ assert_absent "$FAKE_APP_DATA"
 assert_absent "$FAKE_APP_BIN/omazen"
 pass "staged install, failed-update recovery, backup, and uninstall are reversible"
 
-printf '1..12\n'
+CONTENT_SELECT_RULE=$(
+  awk '/#ContentSelectDropdown > menupopup \{/{flag=1} flag{print; if (/^\}/) exit}' "$CHROME_CSS"
+)
+[[ -n $CONTENT_SELECT_RULE ]] || \
+  fail "chrome stylesheet must scope the content select dropdown back to stock styling"
+grep -Fq -- '--arrowpanel-background: light-dark(rgb(244, 244, 244), rgb(31, 31, 31)) !important;' \
+  <<<"$CONTENT_SELECT_RULE" || \
+  fail "content select dropdown must restore Zen's stock arrowpanel background"
+grep -Fq -- '--arrowpanel-color: MenuText !important;' <<<"$CONTENT_SELECT_RULE" || \
+  fail "content select dropdown must retain the system menu text color"
+grep -Fq -- 'background-color: transparent !important;' <<<"$CONTENT_SELECT_RULE" || \
+  fail "content select dropdown host must not carry a palette background"
+pass "chrome stylesheet leaves web-page select dropdowns on Zen's stock palette"
+
+printf '1..13\n'

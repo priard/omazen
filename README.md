@@ -1,45 +1,60 @@
 # Omazen
 
-Omazen hot-reloads the active Omarchy Quattro palette into Zen Browser without restarting Zen after the one-time privileged-loader setup.
+Omazen hot-reloads the active Omarchy Quattro palette into Zen Browser without
+restarting Zen after the one-time privileged-loader setup.
 
-The supported runtime is intentionally small: Bash reads Quattro's semantic `colors.toml` and atomically writes a normalized JSON file; a constrained privileged JavaScript bridge watches that fixed file; CSS variables restyle Zen chrome; and a `JSWindowActor` limited to an allowlist of `about:` pages updates relevant internal pages. There is no Node.js, Python, Rust, Go, Matugen, Sine, WebExtension, remote code download or local server in the runtime path.
-
-The canonical release number is stored in `VERSION`; CI checks every embedded
-bridge version and versioned stylesheet URI against it.
+The runtime normalizes Quattro colors into a fixed JSON file, applies them to
+Zen chrome through a privileged bridge, and uses allowlisted WindowActors for
+supported internal pages. A shared `inotifywait` subprocess wakes every open
+Zen window after atomic palette updates; fixed-file polling remains only as a
+failure fallback and a low-frequency safety check. It has no runtime downloads,
+local server or page-exposed API. See the [architecture](docs/architecture.md) and
+[security model](docs/security.md) for details.
 
 ## Current status
 
-Omazen `1.1.1` is a maintenance release containing release automation and
-documentation improvements. Its runtime is unchanged from the `1.1.0` build,
-which passed the automated syntax, release-consistency, functional and
-rendered-pixel suites, plus the live Zen release gate on 24 August 2026:
+Omazen `1.4.1` keeps canonical stylesheet sources unversioned in the repository
+while installing them under release-versioned names to preserve `chrome://`
+cache busting. It retains the shared event-driven watcher, automatic polling
+fallback, repeatable latency benchmarks and external palette-provider
+compatibility introduced in `1.4.0`. The current tested environment is Omarchy
+`4.0.1` (Quattro) with native
+`zen-browser-bin 1.21.15b-1`.
 
-- Omarchy `4.0.0-1` (Quattro)
-- `zen-browser-bin 1.21.15b-1`
-- Zen build ID `20260818101929`, Gecko `154.0`
-- fx-autoconfig `0.10.16`, pinned to commit `dfdab5684faffc112b76ccb1d8cab7f75da0102c`
-
-The `1.1.0` build passed a real staged update, bridge restart/version validation,
-dark and light live changes, live disable/enable, Settings, dialogs, Library,
-Passwords, Print and Developer Tools. The exhaustive `1.0.0` visual baseline and
-real lifecycle qualification remain recorded alongside the `1.1.0` delta in the
-[validation report](docs/validation.md). The earlier
-[proof-of-concept report](docs/proof-of-concept.md) is retained as historical
-backend evidence.
+The historical live qualification and complete test results are recorded in
+the [validation report](docs/validation.md). Compatibility boundaries and
+unsupported Zen packaging formats are listed in the
+[compatibility guide](docs/compatibility.md).
 
 ## Install
 
-Review [the security model](docs/security.md) first. Then run:
+Review [the security model](docs/security.md), then run:
 
 ```bash
 ./install.sh
 ```
 
-The installer copies Omazen to `~/.local/share/omazen`, creates `~/.local/bin/omazen`, installs the Omarchy `theme-set` hook, integrates the pinned fx-autoconfig loader, and installs only Omazen-owned files in every profile listed by Zen's `profiles.ini`.
+Close Zen normally and open it once after initial setup. Theme changes after
+that are live and do not require a restart.
 
-Close Zen normally and open it once after initial setup. Theme changes after that are live and do not require a restart.
+External desktop integrations that provide an Omazen-compatible `colors.toml`
+may opt out of installing the Omarchy hook while retaining Omazen's loader,
+palette validation, diagnostics and ownership tracking:
 
-Omazen never edits `userChrome.css`, `userContent.css` or `user.js`. It stops on an unowned autoconfig conflict instead of merging privileged startup code automatically.
+```bash
+OMAZEN_ACTIVE_COLORS=/absolute/path/to/colors.toml \
+OMAZEN_SKIP_THEME_HOOK=1 \
+omazen setup
+```
+
+Setup persists the provider mode and active palette source under Omazen's state
+directory. Explicit environment variables still take precedence for that
+invocation; later `sync` calls use the saved configuration. The external
+provider owns triggering `omazen sync` after palette changes. This is an
+integration interface, not an expansion of Omazen's official support scope.
+
+The installer writes only Omazen-owned files and never edits
+`userChrome.css`, `userContent.css` or `user.js`.
 
 ## Commands
 
@@ -48,77 +63,87 @@ omazen setup
 omazen sync
 omazen set [theme]
 omazen status
-omazen doctor
+omazen doctor [--json]
 omazen disable
 omazen enable
 omazen uninstall
 ```
 
 - `setup` installs or repairs the integration idempotently.
-- `sync` regenerates `~/.local/state/omazen/palette.json` from the active Quattro palette.
+- `sync` regenerates the normalized palette from the active Quattro theme.
 - `set "Theme Name"` delegates to `omarchy theme set` and synchronizes.
-- `doctor` checks Zen, profiles, fx-autoconfig, installed-file integrity and permissions,
-  palette freshness, bridge version and errors, and known compatibility.
-- `disable` and `enable` take effect on open windows at the next 250 ms poll.
-- `uninstall` removes only files recorded as Omazen-owned and refuses to delete modified files.
+- `doctor` checks compatibility, installation integrity, palette freshness and
+  bridge health. `doctor --json` emits the same checks as a structured report
+  for bug reports and automation.
+- `disable` and `enable` update open windows without restarting Zen.
+- `uninstall` removes only unchanged files recorded as Omazen-owned.
 
-Top-level installs and updates are assembled in a sibling staging directory.
-`setup` must succeed before an existing application copy is moved to a timestamped
-backup and the staged copy is activated, so removed release files cannot linger.
-
-Transitions default to 180 ms, respect reduced-motion settings, and can be disabled in `about:config` with `omazen.transitions.enabled=false`.
+The event-driven fast path uses `/usr/bin/inotifywait` from `inotify-tools`.
+When it is unavailable or exits unexpectedly, the bridge automatically returns
+to the previous 250 ms polling behavior.
 
 ## Compatibility
 
-The official support scope is **Omarchy Quattro plus the native Arch package `zen-browser-bin`** at `/opt/zen-browser-bin`. This release fully validates only Zen `1.21.15b` (`zen-browser-bin 1.21.15b-1`). Native Zen versions `>=1.20` are compatibility candidates: unknown newer versions may pass setup, but `omazen doctor` warns and they are not supported until tested. Flatpak, Firefox, AppImage, tarball, source-build, and other non-native Zen installations are outside the supported scope. Run `omazen doctor` after every Zen update; package upgrades may replace the program-level loader files and `omazen setup` repairs an owned installation.
+The official support scope is **Omarchy Quattro plus the native Arch package
+`zen-browser-bin`** installed at `/opt/zen-browser-bin`. Zen `1.21.15b` is the
+fully validated version; native Zen versions `>=1.20` are compatibility
+candidates and produce a `doctor` warning until tested. Flatpak, Firefox,
+AppImage, tarball, source-build and other non-native installations are outside
+the supported scope. Omarchy 3 and earlier are rejected because their generated
+theme state uses paths incompatible with Omazen's Quattro palette integration.
 
-See [compatibility details](docs/compatibility.md), [architecture](docs/architecture.md), and [research notes](docs/research.md).
+Run `omazen doctor` after every Zen update. See the
+[compatibility guide](docs/compatibility.md) for the complete contract.
 
 ## Development
 
-Contributions are welcome. Please read the [contribution guide](.github/CONTRIBUTING.md),
-follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md), and use the repository's
-pull request template when opening a change.
+Read the [contribution guide](.github/CONTRIBUTING.md) before making changes.
 
-CI uses Node.js 24 plus pinned ShellCheck 0.11.0 and actionlint 1.7.12
-binaries. To reproduce static analysis locally on Linux x86-64:
-
-```bash
-tests/install-linters.sh /tmp/omazen-linters
-PATH=/tmp/omazen-linters:$PATH tests/lint.sh
-```
-
-The test suite uses only a disposable filesystem tree:
+Run the disposable functional suite with:
 
 ```bash
 tests/test.sh
 ```
 
-It covers palette mapping, idempotent setup, preservation of pre-existing user files, live enable/disable state, ownership-aware uninstall, refusal to overwrite a foreign autoconfig, and the top-level install/update/uninstall lifecycle.
-
-The rendered-pixel smoke test uses the installed Zen binary and a disposable profile:
+Run the WCAG palette contrast checks with:
 
 ```bash
-tests/visual-smoke.sh
+node tests/contrast.mjs
 ```
 
-It loads the production content stylesheet in a real headless Zen window and checks pixels from the resulting screenshot. To keep the capture for inspection, set `OMAZEN_KEEP_VISUAL_OUTPUT=1` and `OMAZEN_VISUAL_OUTPUT_DIR` to an explicit directory.
+The checker scans installed Omarchy `colors.toml` files (or the paths in
+`OMAZEN_CONTRAST_PALETTE_DIR`) and falls back to edge-case fixtures when the
+provider is not installed. Primary button and selection checks are enforced;
+link, muted-text and scrollbar findings are reported as warnings while their
+surface-specific semantics are being refined. Use `--strict` or
+`OMAZEN_CONTRAST_STRICT=1` to promote warnings to failures.
 
-To run the complete pre-release gate locally, including static analysis,
-functional tests, the visual smoke test and whitespace checks:
+The visual smoke command first runs the deterministic headless fixture and,
+when Wayland/Hyprland capture tools are available, also runs
+`tests/visual-integration.sh`. The integration pass boots a real Zen runtime
+with a disposable profile, captures Settings and browser chrome for dark and
+light palettes, exercises live palette changes plus disable/enable, and
+compares the captures with a bounded tolerance. Set
+`OMAZEN_SKIP_VISUAL_INTEGRATION=1` only for environments without a compositor.
+
+Run the complete pre-release gate, including static analysis, regression tests,
+the rendered-pixel smoke test and whitespace checks, with:
 
 ```bash
 tests/release-gate.sh
 ```
 
-The release tag is derived from `VERSION` by `tests/create-release-tag.sh`,
-which rejects dirty worktrees, mismatched embedded versions and missing
-changelog sections.
+To measure the current live-update latency with Zen open, see the
+[benchmark guide](docs/benchmark.md) and run:
 
-Before publishing a release, follow the [release checklist](docs/release.md).
+```bash
+tests/benchmark.sh --mode all --iterations 20
+```
+
+See the [release checklist](docs/release.md) for deployment and publication.
 
 ## License
 
-Omazen source code is licensed under the GNU General Public License version 3.0 only (GPL-3.0-only), with the required attribution notice in [NOTICE](NOTICE). Distributed modified versions of Omazen must remain under the GPL and provide the corresponding source code.
-
-The vendored fx-autoconfig files remain under MPL 2.0 and are kept in a separate directory with their upstream license, exact commit and checksums. They are not relicensed under the GPL. See [third-party notices](THIRD_PARTY_LICENSES.md).
+Omazen source code is licensed under GPL-3.0-only, with the required attribution
+notice in [NOTICE](NOTICE). Vendored fx-autoconfig files remain under MPL 2.0;
+see [third-party notices](THIRD_PARTY_LICENSES.md).
