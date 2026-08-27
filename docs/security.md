@@ -65,6 +65,11 @@ The first two may be reused from a compatible pre-existing fx-autoconfig install
 
 Zen package upgrades can replace program-level files. Omazen does not fight the package manager or auto-repair as root. Run `omazen doctor`; if the owned loader is missing, run `omazen setup` interactively. `sudo` is used only when a terminal is available, otherwise the installer asks through `pkexec`.
 
+Setup and uninstall validate ownership, hashes, sources and destinations before
+elevation, then apply the complete program-file batch through one privileged
+helper invocation. The helper accepts only the three documented paths below
+`/opt/zen-browser-bin`; it is not a general privileged command runner.
+
 ## Uninstall limits
 
 If another user script is found, Omazen leaves an owned shared fx-autoconfig program loader in place rather than breaking that script. If an owned file has been modified, it is also retained. In both cases ownership records remain so the user can inspect and resolve the shared state explicitly.

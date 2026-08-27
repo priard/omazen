@@ -166,6 +166,7 @@ setup_omazen() {
   (( ${#profiles[@]} > 0 )) || die "no Zen profiles found in $OMAZEN_ZEN_CONFIG_DIR/profiles.ini"
 
   install_program_loader
+  flush_program_installs
   for profile in "${profiles[@]}"; do
     ((profile_count += 1))
     install_fx_profile_runtime "$profile"
@@ -227,6 +228,7 @@ remove_manifest_program_files() {
     fi
     remove_owned_program_file "$path" || failed=1
   done < <(tac "$OMAZEN_PROGRAM_MANIFEST")
+  flush_program_removals || failed=1
   return "$failed"
 }
 

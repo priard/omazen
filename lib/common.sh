@@ -201,15 +201,19 @@ backup_owned_file() {
   say "Backed up owned file: $destination"
 }
 
-run_privileged() {
+run_privileged_program_batch() {
+  local helper="$OMAZEN_ROOT/lib/privileged-program-files.sh"
   if [[ ${OMAZEN_TESTING:-0} == 1 || $EUID == 0 ]]; then
-    "$@"
+    "$helper" "$@"
   elif [[ -t 0 && -t 1 ]]; then
-    sudo "$@"
+    sudo "$helper" "$@"
   else
-    pkexec "$@"
+    pkexec "$helper" "$@"
   fi
 }
+
+declare -a OMAZEN_PROGRAM_INSTALL_BATCH=()
+declare -a OMAZEN_PROGRAM_REMOVE_BATCH=()
 
 install_user_file() {
   local source=$1
@@ -259,9 +263,27 @@ install_program_file() {
     backup_owned_file "$destination"
   fi
 
-  run_privileged mkdir -p -- "$(dirname -- "$destination")"
-  run_privileged install -m "$mode" -- "$source" "$destination"
-  record_owned_file "$OMAZEN_PROGRAM_MANIFEST" "$destination" "$source_hash"
+  OMAZEN_PROGRAM_INSTALL_BATCH+=("$source" "$destination" "$mode" "$source_hash")
+}
+
+flush_program_installs() {
+  local index
+  (( ${#OMAZEN_PROGRAM_INSTALL_BATCH[@]} > 0 )) || return 0
+  local arguments=(install "$OMAZEN_ZEN_PROGRAM_DIR")
+  for (( index=0; index<${#OMAZEN_PROGRAM_INSTALL_BATCH[@]}; index+=4 )); do
+    arguments+=(
+      "${OMAZEN_PROGRAM_INSTALL_BATCH[index]}"
+      "${OMAZEN_PROGRAM_INSTALL_BATCH[index+1]}"
+      "${OMAZEN_PROGRAM_INSTALL_BATCH[index+2]}"
+    )
+  done
+  run_privileged_program_batch "${arguments[@]}"
+  for (( index=0; index<${#OMAZEN_PROGRAM_INSTALL_BATCH[@]}; index+=4 )); do
+    record_owned_file "$OMAZEN_PROGRAM_MANIFEST" \
+      "${OMAZEN_PROGRAM_INSTALL_BATCH[index+1]}" \
+      "${OMAZEN_PROGRAM_INSTALL_BATCH[index+3]}"
+  done
+  OMAZEN_PROGRAM_INSTALL_BATCH=()
 }
 
 remove_owned_user_file() {
@@ -295,10 +317,22 @@ remove_owned_program_file() {
       warn "leaving modified program file in place: $path"
       return 1
     fi
-    run_privileged rm -f -- "$path"
-    say "Removed: $path"
+    OMAZEN_PROGRAM_REMOVE_BATCH+=("$path")
+    return 0
   fi
   forget_owned_file "$OMAZEN_PROGRAM_MANIFEST" "$path"
+}
+
+flush_program_removals() {
+  local path
+  (( ${#OMAZEN_PROGRAM_REMOVE_BATCH[@]} > 0 )) || return 0
+  run_privileged_program_batch remove "$OMAZEN_ZEN_PROGRAM_DIR" \
+    "${OMAZEN_PROGRAM_REMOVE_BATCH[@]}"
+  for path in "${OMAZEN_PROGRAM_REMOVE_BATCH[@]}"; do
+    say "Removed: $path"
+    forget_owned_file "$OMAZEN_PROGRAM_MANIFEST" "$path"
+  done
+  OMAZEN_PROGRAM_REMOVE_BATCH=()
 }
 
 remove_installed_application_copy() {

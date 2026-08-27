@@ -52,6 +52,7 @@ for item in bin lib zen hooks vendor docs tests README.md CHANGELOG.md LICENSE N
 done
 printf '%s\n' "$OMAZEN_VERSION" >"$STAGING/.omazen-installed"
 chmod +x "$STAGING/bin/omazen" "$STAGING/hooks/theme-set" "$STAGING/install.sh" "$STAGING/uninstall.sh"
+chmod +x "$STAGING/lib/privileged-program-files.sh"
 
 if [[ ${OMAZEN_INSTALL_NO_SETUP:-0} != 1 ]]; then
   "$STAGING/bin/omazen" setup
