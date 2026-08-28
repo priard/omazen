@@ -376,8 +376,14 @@ grep -A3 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([
 grep -A4 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
   "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground)' || \
   fail "context menu hover text palette"
+grep -A2 -F -- ':root[data-omazen-enabled="true"] menupopup::part(content) {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: var(--omazen-background)' || \
+  fail "context menus match the sidebar surface"
 grep -Fq -- ':root[data-omazen-enabled="true"] #aHTMLTooltip {' \
   "$CHROME_CSS" || fail "native HTML tooltip has a complete theme surface"
+grep -A7 -F -- ':root[data-omazen-enabled="true"] #aHTMLTooltip {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: var(--omazen-background)' || \
+  fail "native tooltips match the sidebar surface"
 grep -Fq -- '--background-color-canvas: var(--omazen-background)' \
   "$CONTENT_CSS" || fail "Settings canvas palette"
 grep -Fq -- '--input-text-background-color: var(--omazen-background-dark)' \

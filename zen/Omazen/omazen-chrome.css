@@ -556,6 +556,17 @@
   box-shadow: var(--panel-box-shadow) !important;
 }
 
+/* Context menus belong visually to the browser chrome next to the sidebar,
+ * while panels remain intentionally recessed. Match menu surfaces to the
+ * sidebar and keep the existing selection color for active rows. */
+:root[data-omazen-enabled="true"] menupopup {
+  --panel-background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] menupopup::part(content) {
+  background: var(--omazen-background) !important;
+}
+
 /* Linux gives XUL tooltips a native GTK surface and an environment-provided
  * radius. Mixing that surface with theme colors leaves bright corner wedges.
  * Paint the complete tooltip ourselves so its fill, edge and radius agree. */
@@ -563,7 +574,7 @@
 :root[data-omazen-enabled="true"] #aHTMLTooltip {
   appearance: none !important;
   -moz-default-appearance: none !important;
-  background: var(--omazen-background-dark) !important;
+  background: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
   border: 1px solid var(--omazen-border) !important;
   border-radius: 8px !important;
