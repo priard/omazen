@@ -4,6 +4,13 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-08-28
+
+### Fixed
+
+- Applied the active foreground to Zen folder names and their inline rename
+  fields in restored and additional windows.
+
 ## [1.5.2] - 2026-08-28
 
 ### Fixed

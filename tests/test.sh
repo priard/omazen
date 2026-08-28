@@ -275,6 +275,8 @@ grep -Fq -- '--zen-loading-progress-bar-color: var(--omazen-accent)' \
 grep -A2 -F -- '#navigator-toolbox zen-workspace {' \
   "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground) !important;' || \
   fail "restored and additional window sidebars use the Omazen foreground"
+grep -Fq -- 'zen-folder > .tab-group-label-container > :is(label, #tab-label-input) {' \
+  "$CHROME_CSS" || fail "folder names use the Omazen foreground"
 grep -A8 -F -- ':is(menupopup, panel) {' \
   "$CHROME_CSS" | grep -Fq -- '--panel-background: var(--omazen-background)' || \
   fail "browser panels match the sidebar surface"

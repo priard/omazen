@@ -68,6 +68,11 @@
   color: var(--omazen-foreground) !important;
 }
 
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container > :is(label, #tab-label-input) {
+  color: var(--omazen-foreground) !important;
+}
+
 /* Zen's native vertical-tab dividers use a fixed 10% light-dark overlay,
  * which disappears on some Omarchy palettes. Keep every sidebar divider on
  * one semantic, theme-aware color, including the Clear/pinned-tabs row. */
