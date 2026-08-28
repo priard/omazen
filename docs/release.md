@@ -1,6 +1,6 @@
 # Release checklist
 
-Use this checklist from a clean `main` worktree for the local `1.4.1` release
+Use this checklist from a clean `main` worktree for the local `1.5.0` release
 candidate.
 
 ## Automated gate
@@ -21,6 +21,9 @@ skip only the compositor-backed extension.
 
 The CI visual job downloads the fixed Zen release used by the test, verifies its
 SHA-256 before extraction, and then checks the embedded application version.
+The release workflow also builds the CLI with Rust 1.98.0 and publishes a Linux
+x86-64 archive containing the `libexec/omazen-rust` installation payload plus a
+SHA-256 sidecar. `install.sh` places that payload directly at `bin/omazen`.
 
 ## Local deployment gate
 
@@ -29,8 +32,8 @@ SHA-256 before extraction, and then checks the embedded application version.
 3. Reopen Zen once so fx-autoconfig loads the new bridge and shared module.
 4. Run `omazen doctor` and `omazen doctor --json`; require zero failures and
    zero warnings in both reports. Save the JSON report for the test record:
-   `omazen doctor --json > /tmp/omazen-1.4.1-doctor.json`.
-5. Confirm `bridge.log` contains `BRIDGE_LOADED version=1.4.1`,
+   `omazen doctor --json > /tmp/omazen-1.5.0-doctor.json`.
+5. Confirm `bridge.log` contains `BRIDGE_LOADED version=1.5.0`,
    `WATCHER_READY backend=inotify`, a successful `PALETTE_APPLIED`, and no
    current error or `WATCHER_FALLBACK` after watcher startup.
 6. Exercise dark/light theme changes, disable/enable, Settings, a common dialog,

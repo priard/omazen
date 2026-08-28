@@ -20,8 +20,8 @@ chrome/JS/Omazen/OmazenParent.sys.mjs
 chrome/JS/Omazen/OmazenChild.sys.mjs
 chrome/JS/Omazen/OmazenPalette.sys.mjs
 chrome/JS/Omazen/OmazenWatcher.sys.mjs
-chrome/JS/Omazen/omazen-chrome-v1.4.1.css
-chrome/JS/Omazen/omazen-content-v1.4.1.css
+chrome/JS/Omazen/omazen-chrome-v1.5.0.css
+chrome/JS/Omazen/omazen-content-v1.5.0.css
 ```
 
 Program-level files for the supported Zen package:
@@ -37,6 +37,9 @@ The first two may be reused from a compatible pre-existing fx-autoconfig install
 ## Reductions
 
 - No remote download, update or execution at runtime.
+- The installed command is the Rust executable itself, with no shell launcher
+  or alternate CLI implementation. Rust is a build dependency and the
+  installed runtime never downloads a toolchain.
 - Dependencies are pinned by commit and SHA-256.
 - The visual CI job pins the Zen release version and verifies its SHA-256 before
   extraction or execution; the archive's version metadata remains a separate
