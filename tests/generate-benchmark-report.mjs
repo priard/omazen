@@ -58,6 +58,7 @@ function mebibytes(value) {
 const latency = parseCsv(await readFile(path.join(outputDir, "latency.csv"), "utf8"));
 const cpu = parseCsv(await readFile(path.join(outputDir, "cpu.csv"), "utf8"));
 const memory = parseCsv(await readFile(path.join(outputDir, "memory.csv"), "utf8"));
+const resources = parseCsv(await readFile(path.join(outputDir, "resources.csv"), "utf8"));
 const successful = latency.filter((row) => row.outcome === "ok");
 const successfulKeys = new Set(successful.map((row) => `${row.scenario}/${row.run}/${row.iteration}`));
 const isSuccessful = (row) => successfulKeys.has(`${row.scenario}/${row.run}/${row.iteration}`);
@@ -88,5 +89,25 @@ for (const [label, summary, formatter, unit] of rows) {
   report += `| ${label} | ${summary.n} | ${formatter(summary.min)} | ${formatter(summary.p50)} | ${formatter(summary.mean)} | ${formatter(summary.stddev)} | ${formatter(summary.p95)} | ${formatter(summary.p99)} | ${formatter(summary.max)} | ${unit} |\n`;
 }
 report += "\nPercentiles use linear interpolation at `(N - 1) × p`. No outlier is removed.\n";
+
+const batchCpuPerCommand = summarize(resources.map((row) =>
+  ((Number(row.user_seconds) + Number(row.system_seconds)) * 1000) / Number(row.iterations)));
+const batchCpuShare = summarize(resources.map((row) =>
+  ((Number(row.user_seconds) + Number(row.system_seconds)) / Number(row.wall_seconds)) * 100));
+const batchAverageRss = summarize(resources.map((row) => row.average_rss_bytes));
+const batchAveragePss = summarize(resources.map((row) => row.average_pss_bytes));
+const batchPeakRss = summarize(resources.map((row) => row.max_rss_bytes));
+const batchPeakPss = summarize(resources.map((row) => row.max_pss_bytes));
+
+report += "\n## Aggregate resource usage\n\n";
+report += "Each run executes a complete sync batch. Bash built-in `time` measures aggregate child CPU, while the process-tree sampler observes repeated commands at 1 ms intervals. This avoids losing CPU and memory data when one Rust process exits between `/proc` samples. CPU time is averaged per command; average RSS/PSS is time-sampled across each batch.\n\n";
+report += "| Metric | Runs | Mean | Minimum | Maximum | Unit |\n";
+report += "|---|---:|---:|---:|---:|---|\n";
+report += `| CPU time per sync | ${batchCpuPerCommand.n} | ${batchCpuPerCommand.mean.toFixed(3)} | ${batchCpuPerCommand.min.toFixed(3)} | ${batchCpuPerCommand.max.toFixed(3)} | ms |\n`;
+report += `| CPU share | ${batchCpuShare.n} | ${batchCpuShare.mean.toFixed(1)} | ${batchCpuShare.min.toFixed(1)} | ${batchCpuShare.max.toFixed(1)} | % of one core |\n`;
+report += `| Average process-tree RSS | ${batchAverageRss.n} | ${mebibytes(batchAverageRss.mean)} | ${mebibytes(batchAverageRss.min)} | ${mebibytes(batchAverageRss.max)} | MiB |\n`;
+report += `| Average process-tree PSS | ${batchAveragePss.n} | ${mebibytes(batchAveragePss.mean)} | ${mebibytes(batchAveragePss.min)} | ${mebibytes(batchAveragePss.max)} | MiB |\n`;
+report += `| Batch peak RSS | ${batchPeakRss.n} | ${mebibytes(batchPeakRss.mean)} | ${mebibytes(batchPeakRss.min)} | ${mebibytes(batchPeakRss.max)} | MiB |\n`;
+report += `| Batch peak PSS | ${batchPeakPss.n} | ${mebibytes(batchPeakPss.mean)} | ${mebibytes(batchPeakPss.min)} | ${mebibytes(batchPeakPss.max)} | MiB |\n`;
 
 await writeFile(path.join(outputDir, "summary.md"), report);

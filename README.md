@@ -3,6 +3,14 @@
 Omazen hot-reloads the active Omarchy Quattro palette into Zen Browser without
 restarting Zen after the one-time privileged-loader setup.
 
+> [!IMPORTANT]
+> This repository is an unofficial, opinionated fork of
+> [hemagome/omazen](https://github.com/hemagome/omazen). It preserves the
+> upstream GPL-3.0-only license and required attribution, but its additional
+> visual and integration choices are maintained independently and should not be
+> attributed to the upstream maintainer. This fork was materially modified in
+> August 2026; see the commit history and [NOTICE](NOTICE) for details.
+
 The runtime normalizes Quattro colors into a fixed JSON file, applies them to
 Zen chrome through a privileged bridge, and uses allowlisted WindowActors for
 supported internal pages. A shared `inotifywait` subprocess wakes every open

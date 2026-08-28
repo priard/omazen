@@ -207,6 +207,41 @@ pass "Omarchy 3 is rejected before setup changes"
 
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "palette mode mapping"
 grep -Fq '"background_dark": "#eeeeee"' "$FAKE_STATE/palette.json" || fail "palette background mapping"
+cp "$FAKE_COLORS" "$TEST_ROOT/full-colors.toml"
+cat >"$FAKE_COLORS" <<'EOF'
+accent = "#85b34c"
+active_border_color = "#496c1e"
+foreground = "#22211d"
+background = "#fdf6ee"
+selection_foreground = "#fdf6ee"
+selection_background = "#85b34c"
+color0 = "#7a6550"
+color1 = "#df2b0d"
+color2 = "#29472a"
+color3 = "#8a6c3e"
+color4 = "#5e8e28"
+color5 = "#28473f"
+color6 = "#3d6b52"
+color7 = "#24201d"
+color8 = "#a09080"
+color9 = "#e03c20"
+color10 = "#1b2e1c"
+color11 = "#6b5237"
+color12 = "#496c1e"
+color13 = "#28463c"
+color14 = "#4a6b4d"
+color15 = "#22211d"
+EOF
+run_omazen sync >/dev/null
+grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "legacy theme mode resolution"
+grep -Fq '"background": "#fdf6ee"' "$FAKE_STATE/palette.json" || fail "legacy theme background resolution"
+grep -Fq '"background_dark": "#beb9b3"' "$FAKE_STATE/palette.json" || fail "legacy theme dark surface derivation"
+grep -Fq '"foreground_muted": "#a09080"' "$FAKE_STATE/palette.json" || fail "legacy theme muted color resolution"
+grep -Fq '"selection": "#85b34c"' "$FAKE_STATE/palette.json" || fail "legacy theme selection alias"
+grep -Fq '"border": "#496c1e"' "$FAKE_STATE/palette.json" || fail "legacy theme active border"
+cp "$TEST_ROOT/full-colors.toml" "$FAKE_COLORS"
+run_omazen sync >/dev/null
+pass "Omarchy resolver normalizes legacy repository themes"
 grep -Fq -- '--zen-urlbar-background-base: var(--omazen-background-light)' \
   "$CHROME_CSS" || fail "inactive URL bar background"
 grep -Fq -- '--lwt-toolbar-field-focus: var(--omazen-background-light)' \
@@ -215,26 +250,125 @@ grep -Fq -- '--zen-urlbar-background-transparent: var(--omazen-background-light)
   "$CHROME_CSS" || fail "expanded URL bar background"
 grep -Fq -- '#urlbar:is([focused="true"], [breakout-extend]) .urlbar-background' \
   "$CHROME_CSS" || fail "focused URL bar outline"
+grep -Fq -- '#navigator-toolbox,' \
+  "$CHROME_CSS" || fail "universal toolbar hover scope"
+grep -Fq -- '--toolbarbutton-icon-fill-attention: var(--omazen-accent-foreground)' \
+  "$CHROME_CSS" || fail "attention toolbar icons use contrast foreground"
+grep -Fq -- '.urlbar-page-action,' \
+  "$CHROME_CSS" || fail "URL bar extension actions use contrast foreground"
+grep -Fq -- 'background-color: color-mix(in srgb, var(--omazen-foreground) 16%, transparent)' \
+  "$CHROME_CSS" || fail "URL bar actions share a readable hover surface"
+grep -Fq -- '--omazen-sidebar-separator: color-mix(' \
+  "$CHROME_CSS" || fail "theme-aware sidebar separator token"
+grep -Fq -- '.pinned-tabs-container-separator toolbarseparator,' \
+  "$CHROME_CSS" || fail "pinned tabs Clear separator palette"
+grep -Fq -- 'zen-workspace > arrowscrollbox[overflowing]' \
+  "$CHROME_CSS" || fail "scrolling workspace edge separators palette"
+grep -Fq -- '--zen-scrollbar-overflow-background: var(--omazen-sidebar-separator)' \
+  "$CHROME_CSS" || fail "scrolling workspace separator token"
+grep -Fq -- 'width: 90% !important;' \
+  "$CHROME_CSS" || fail "scrolling workspace separators respect sidebar insets"
+grep -Fq -- '.pinned-tabs-container-separator toolbarbutton:hover' \
+  "$CHROME_CSS" || fail "Clear button hover contrast surface"
+grep -Fq -- '--zen-loading-progress-bar-color: var(--omazen-accent)' \
+  "$CHROME_CSS" || fail "Zen loading indicator follows the Omarchy accent"
+grep -A8 -F -- ':is(menupopup, panel) {' \
+  "$CHROME_CSS" | grep -Fq -- '--panel-background: var(--omazen-background)' || \
+  fail "browser panels match the sidebar surface"
+grep -A8 -F -- '.pinned-tabs-container-separator toolbarbutton:hover :is(' \
+  "$CHROME_CSS" | grep -Fq -- 'fill: var(--omazen-accent)' || \
+  fail "Clear arrow and label share the accent hover state"
+grep -Fq -- 'zen-folder > .tab-group-label-container:hover :is(' \
+  "$CHROME_CSS" || fail "folder hover is scoped to its direct label container"
+if grep -Fq -- 'zen-folder:hover :is(' "$CHROME_CSS"; then
+  fail "folder hover must not recolor nested tabs"
+fi
+grep -Fq -- '#tabs-newtab-button[in-urlbar="true"] {' \
+  "$CHROME_CSS" || fail "active New Tab search button palette"
+ACTIVE_NEWTAB_RULE=$(sed -n \
+  '/#tabs-newtab-button\[in-urlbar="true"\] {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-accent) !important;' \
+  <<< "$ACTIVE_NEWTAB_RULE" || fail "active New Tab search button background"
+grep -Fq -- 'color: var(--omazen-accent-foreground) !important;' \
+  <<< "$ACTIVE_NEWTAB_RULE" || fail "active New Tab search button foreground"
+grep -Fq -- '--zen-big-shadow: var(--omazen-content-shadow) !important;' \
+  "$CHROME_CSS" || fail "theme-aware Zen content shadow token"
+grep -Fq -- '[data-omazen-mode="light"] {' \
+  "$CHROME_CSS" || fail "light-mode content shadow"
+grep -Fq -- 'box-shadow: var(--omazen-content-shadow) !important;' \
+  "$CHROME_CSS" || fail "content surface elevation shadow"
+CONTENT_SURFACE_RULE=$(sed -n \
+  '/\.browserSidebarContainer:not(\[is-zen-split="true"\]):not(\.zen-glance-overlay) {/,/^}/p' \
+  "$CHROME_CSS")
+if grep -Eq -- '^[[:space:]]*border:' <<< "$CONTENT_SURFACE_RULE"; then
+  fail "content elevation must not add a flat border"
+fi
+grep -Fq -- '.zen-glance-sidebar-container toolbarbutton:hover:not([waitconfirmation]) {' \
+  "$CHROME_CSS" || fail "Glance controls use the Omarchy hover palette"
+grep -A3 -F -- '.browserSidebarContainer.zen-glance-overlay {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: transparent !important;' || \
+  fail "Glance overlay host leaves the parent page visible"
+if sed -n '/:is(/,/)/p' "$CHROME_CSS" | grep -Fxq '  .zen-glance-overlay,'; then
+  fail "Glance overlay must not inherit an opaque grouped surface"
+fi
+grep -Fq -- '.browserSidebarContainer:not(.zen-glance-overlay) .browserStack,' \
+  "$CHROME_CSS" || fail "Glance shadow is not clipped by the regular content mask"
+grep -Fq -- '--zen-main-browser-background-old: var(--omazen-background)' \
+  "$CHROME_CSS" || fail "theme transition background override"
+ZEN_BACKGROUND_RULE=$(sed -n \
+  '/#zen-browser-background::before,$/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-background) !important;' \
+  <<< "$ZEN_BACKGROUND_RULE" || fail "themed Zen base background"
+SELECTED_TAB_RULE=$(sed -n \
+  '/\.tabbrowser-tab\[selected\] \.tab-background,/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-accent) !important;' \
+  <<< "$SELECTED_TAB_RULE" || fail "selected tab accent background"
+grep -Fq -- 'color: var(--omazen-accent-foreground) !important;' \
+  <<< "$SELECTED_TAB_RULE" || fail "selected tab accent foreground"
+if sed -n '/#zen-tabbox-wrapper {/,/^}/p' "$CHROME_CSS" | \
+  grep -Fq -- 'box-shadow: none'; then
+  fail "content wrapper must not suppress Zen elevation"
+fi
 grep -Fq -- ':not([zen-compact-mode="true"]) #navigator-toolbox' \
   "$CHROME_CSS" || fail "non-compact toolbox palette"
+NONCOMPACT_TOOLBOX_RULE=$(sed -n \
+  '/:not(\[zen-compact-mode="true"\]) #navigator-toolbox {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background-color: var(--omazen-background) !important;' \
+  <<< "$NONCOMPACT_TOOLBOX_RULE" || fail "non-compact toolbox palette"
 grep -Fq -- '[zen-compact-mode="true"] .zen-toolbar-background' \
   "$CHROME_CSS" || fail "compact rounded background palette"
 grep -Fq -- '--zen-navigator-toolbox-background: transparent' \
   "$CHROME_CSS" || fail "compact rectangular toolbox transparency"
-if grep -Fxq -- '  #navigator-toolbox,' "$CHROME_CSS"; then
-  fail "compact rectangular toolbox must remain transparent"
-fi
-if grep -A3 -F -- '[zen-compact-mode="true"] .zen-toolbar-background {' \
-  "$CHROME_CSS" | grep -Eq -- '(box-shadow|outline)'; then
-  fail "compact rounded background must retain Zen's native frame and shadow"
-fi
+COMPACT_BACKGROUND_RULE=$(sed -n \
+  '/\[zen-compact-mode="true"\] \.zen-toolbar-background {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-background) !important;' \
+  <<< "$COMPACT_BACKGROUND_RULE" || fail "compact rounded background palette"
+grep -Fq -- 'box-shadow: none !important;' \
+  <<< "$COMPACT_BACKGROUND_RULE" || fail "compact rounded background shadow removal"
+grep -Fq -- 'outline: none !important;' \
+  <<< "$COMPACT_BACKGROUND_RULE" || fail "compact rounded background outline removal"
+COMPACT_FRAME_RULE=$(sed -n \
+  '/\[zen-compact-mode="true"\] #navigator-toolbox:not(\[animate="true"\]) {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-background) !important;' \
+  <<< "$COMPACT_FRAME_RULE" || fail "compact toolbox transparent gap fill"
+grep -Fq -- 'border: 2px solid ' \
+  <<< "$COMPACT_FRAME_RULE" || fail "compact toolbox flat border"
+grep -Fq -- 'border-radius:' \
+  <<< "$COMPACT_FRAME_RULE" || fail "compact toolbox rounded border"
 if grep -Fq -- '#urlbar-background' "$CHROME_CSS"; then
   fail "obsolete URL bar background ID selector"
 fi
 if grep -Fq -- 'zen-workspace[active]' "$CHROME_CSS"; then
   fail "active workspace container must not receive selection background"
 fi
-if grep -Fq -- '.zen-current-workspace-indicator' "$CHROME_CSS"; then
+if sed -n '/\.zen-current-workspace-indicator/,/}/p' "$CHROME_CSS" |
+  grep -Eq '^[[:space:]]*(padding|background)(-[[:alnum:]]+)*[[:space:]]*:'; then
   fail "workspace indicator must retain native padding and background"
 fi
 if sed -n '/:is(/,/)/p' "$CHROME_CSS" | grep -Fxq '  input'; then
@@ -248,10 +382,20 @@ grep -A3 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([
 grep -A4 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
   "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground)' || \
   fail "context menu hover text palette"
+grep -A2 -F -- ':root[data-omazen-enabled="true"] menupopup::part(content) {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: var(--omazen-background)' || \
+  fail "context menus match the sidebar surface"
+grep -Fq -- ':root[data-omazen-enabled="true"] #aHTMLTooltip {' \
+  "$CHROME_CSS" || fail "native HTML tooltip has a complete theme surface"
+grep -A7 -F -- ':root[data-omazen-enabled="true"] #aHTMLTooltip {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: var(--omazen-background)' || \
+  fail "native tooltips match the sidebar surface"
 grep -Fq -- '--background-color-canvas: var(--omazen-background)' \
   "$CONTENT_CSS" || fail "Settings canvas palette"
-grep -Fq -- '--input-text-background-color: var(--omazen-background-dark)' \
+grep -Fq -- '--input-text-background-color: var(--omazen-settings-control-background)' \
   "$CONTENT_CSS" || fail "Settings search palette"
+grep -Fq -- '--omazen-settings-control-background: color-mix(' \
+  "$CONTENT_CSS" || fail "light Settings controls soften legacy derived surfaces"
 grep -Fq -- '--theme-bg-color: var(--omazen-background-light)' \
   "$CONTENT_CSS" || fail "managed notice palette"
 grep -Fq -- '--checkbox-background-color-checked: var(--omazen-accent)' \

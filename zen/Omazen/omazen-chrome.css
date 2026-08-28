@@ -12,12 +12,15 @@
   --zen-colors-border-contrast: var(--omazen-accent) !important;
   --omazen-accent-foreground: var(--omazen-background-dark);
   --zen-colors-input-bg: var(--omazen-background-light) !important;
-  --zen-colors-hover-bg: color-mix(in srgb, var(--omazen-background-light) 82%, var(--omazen-accent)) !important;
-  --zen-main-browser-background: var(--omazen-background-dark) !important;
+  --zen-colors-hover-bg: var(--omazen-accent) !important;
+  --zen-main-browser-background: var(--omazen-background) !important;
+  --zen-main-browser-background-old: var(--omazen-background) !important;
   --zen-main-browser-background-toolbar: var(--omazen-background) !important;
+  --zen-main-browser-background-toolbar-old: var(--omazen-background) !important;
+  --zen-themed-toolbar-bg-transparent: var(--omazen-background) !important;
   --zen-navigator-toolbox-background: var(--omazen-background) !important;
   --zen-toolbar-element-bg: color-mix(in srgb, var(--omazen-background-light) 88%, transparent) !important;
-  --zen-toolbar-element-bg-hover: color-mix(in srgb, var(--omazen-selection) 78%, var(--omazen-accent)) !important;
+  --zen-toolbar-element-bg-hover: var(--omazen-accent) !important;
   --zen-split-view-active-tab-bg: var(--omazen-selection) !important;
   --zen-active-split-outline-color: var(--omazen-accent) !important;
   --zen-urlbar-background-base: var(--omazen-background-light) !important;
@@ -36,6 +39,10 @@
   --arrowpanel-color: var(--omazen-foreground) !important;
   --arrowpanel-border-color: var(--omazen-border) !important;
   --panel-separator-color: var(--omazen-border) !important;
+  --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+  --omazen-content-shadow:
+    0 3px 8px rgb(0 0 0 / 24%);
+  --zen-big-shadow: var(--omazen-content-shadow) !important;
   --input-bgcolor: var(--omazen-background-dark) !important;
   --input-color: var(--omazen-foreground) !important;
   --focus-outline-color: var(--omazen-accent) !important;
@@ -43,7 +50,68 @@
   --tab-selected-textcolor: var(--omazen-foreground) !important;
   --omazen-scrollbar-thumb: var(--omazen-foreground-muted);
   --omazen-scrollbar-track: var(--omazen-background-dark);
+  --omazen-sidebar-separator: color-mix(
+    in srgb,
+    var(--omazen-foreground) 24%,
+    var(--omazen-background)
+  );
+  --omazen-content-radius: calc(var(--zen-native-inner-radius) + 4px);
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
+}
+
+/* Zen's native vertical-tab dividers use a fixed 10% light-dark overlay,
+ * which disappears on some Omarchy palettes. Keep every sidebar divider on
+ * one semantic, theme-aware color, including the Clear/pinned-tabs row. */
+:root[data-omazen-enabled="true"] #navigator-toolbox :is(
+  .pinned-tabs-container-separator toolbarseparator,
+  .vertical-pinned-tabs-container-separator toolbarseparator,
+  #zen-sidebar-top-buttons-separator,
+  toolbarseparator
+) {
+  background: var(--omazen-sidebar-separator) !important;
+  border-color: var(--omazen-sidebar-separator) !important;
+  color: var(--omazen-sidebar-separator) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox :is(
+  .pinned-tabs-container-separator toolbarseparator,
+  .vertical-pinned-tabs-container-separator toolbarseparator,
+  #zen-sidebar-top-buttons-separator,
+  toolbarseparator
+)::before {
+  border-color: var(--omazen-sidebar-separator) !important;
+}
+
+:root[data-omazen-enabled="true"] zen-workspace > arrowscrollbox[overflowing] {
+  --zen-scrollbar-overflow-background: var(--omazen-sidebar-separator) !important;
+}
+
+:root[data-omazen-enabled="true"] zen-workspace > arrowscrollbox[overflowing]::before,
+:root[data-omazen-enabled="true"] zen-workspace > arrowscrollbox[overflowing]::after {
+  background-color: var(--omazen-sidebar-separator) !important;
+  border-radius: 999px !important;
+  left: 5% !important;
+  width: 90% !important;
+}
+
+/* Zen otherwise blends the centered loading indicator heavily with a fixed
+ * black/white overlay. Keep both its short pulse and long-load sweep tied to
+ * the current Omarchy palette. */
+:root[data-omazen-enabled="true"] #zen-loading-progress-bar {
+  --zen-loading-progress-bar-color: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-loading-progress-bar[long-load="true"] {
+  background: color-mix(
+    in srgb,
+    var(--omazen-accent) 20%,
+    var(--omazen-background)
+  ) !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-mode="light"] {
+  --omazen-content-shadow:
+    0 3px 8px rgb(0 0 0 / 18%);
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -57,14 +125,55 @@
   color: var(--omazen-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"]:not([zen-compact-mode="true"]) #navigator-toolbox,
-:root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background {
+:root[data-omazen-enabled="true"]:not([zen-compact-mode="true"]) #navigator-toolbox {
   background-color: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
 }
 
+:root[data-omazen-enabled="true"] #zen-main-app-wrapper {
+  background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-browser-background::before,
+:root[data-omazen-enabled="true"] #zen-browser-background::after {
+  background: var(--omazen-background) !important;
+  opacity: 1 !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-browser-background .zen-browser-grain {
+  display: none !important;
+}
+
 :root[data-omazen-enabled="true"][zen-compact-mode="true"] {
   --zen-navigator-toolbox-background: transparent !important;
+}
+
+:root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background {
+  background: var(--omazen-background) !important;
+  color: var(--omazen-foreground) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+:root[data-omazen-enabled="true"][zen-compact-mode="true"] #navigator-toolbox:not([animate="true"]) {
+  box-sizing: border-box !important;
+  background: var(--omazen-background) !important;
+  border: 2px solid color-mix(in srgb, var(--omazen-background) 84%, var(--omazen-foreground)) !important;
+  border-radius: calc(var(--zen-native-inner-radius) - var(--zen-compact-mode-no-padding-radius-fix, 0px)) !important;
+}
+
+:root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background::before,
+:root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background::after {
+  background: var(--omazen-background) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #zen-appcontent-wrapper,
+  #zen-tabbox-wrapper
+) {
+  background: var(--omazen-background) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -115,29 +224,361 @@
   outline: 1px solid var(--omazen-accent) !important;
 }
 
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-background {
+  background-color: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-input {
+  color: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-input::placeholder {
+  color: var(--omazen-accent-foreground) !important;
+  opacity: 0.72 !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover :is(
+  #identity-icon,
+  #tracking-protection-icon,
+  #zen-site-data-icon-button,
+  toolbarbutton,
+  .urlbar-page-action,
+  .urlbar-icon,
+  image,
+  svg,
+  path,
+  use
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+/* Toolbar extensions and new Zen actions must inherit the same contrast as
+ * built-in buttons. This intentionally keys off toolbar placement instead of
+ * individual button IDs so newly added actions remain theme-aware. */
+:root[data-omazen-enabled="true"] :is(
+  #navigator-toolbox,
+  #zen-appcontent-navbar-wrapper,
+  #zen-sidebar-top-buttons,
+  #zen-sidebar-foot-buttons
+) toolbarbutton:hover {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  --toolbarbutton-icon-fill-attention: var(--omazen-accent-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #navigator-toolbox,
+  #zen-appcontent-navbar-wrapper,
+  #zen-sidebar-top-buttons,
+  #zen-sidebar-foot-buttons
+) toolbarbutton:hover :is(
+  image,
+  label,
+  svg,
+  path,
+  use,
+  .toolbarbutton-icon,
+  .toolbarbutton-text,
+  .toolbarbutton-badge-stack,
+  .urlbar-icon
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #nav-bar,
+  #zen-appcontent-navbar-wrapper
+) toolbarbutton:hover {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  --toolbarbutton-opacity-disabled: 1 !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #nav-bar,
+  #zen-appcontent-navbar-wrapper
+) toolbarbutton:hover > :is(
+  .toolbarbutton-icon,
+  .toolbarbutton-text,
+  .toolbarbutton-badge-stack
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  background-color: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #nav-bar,
+  #zen-appcontent-navbar-wrapper
+) toolbarbutton:hover :is(
+  image,
+  label,
+  .toolbarbutton-icon,
+  .toolbarbutton-text
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #back-button,
+  #forward-button,
+  #reload-button,
+  #stop-button,
+  #PanelUI-menu-button,
+  #downloads-button,
+  #tabs-newtab-button,
+  #vertical-tabs-newtab-button,
+  #zen-toggle-compact-mode > toolbarbutton
+):hover {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #back-button,
+  #forward-button,
+  #reload-button,
+  #stop-button,
+  #PanelUI-menu-button,
+  #downloads-button,
+  #tabs-newtab-button,
+  #vertical-tabs-newtab-button,
+  #zen-toggle-compact-mode > toolbarbutton
+):hover > :is(
+  .toolbarbutton-icon,
+  .toolbarbutton-badge-stack
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  background-color: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #tabs-newtab-button[in-urlbar="true"] {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  stroke: var(--omazen-accent-foreground) !important;
+  box-shadow: none !important;
+}
+
+:root[data-omazen-enabled="true"] #tabs-newtab-button[in-urlbar="true"] :is(
+  label,
+  image,
+  .toolbarbutton-text,
+  .toolbarbutton-icon,
+  .toolbarbutton-badge-stack
+) {
+  background-color: transparent !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover #zen-site-data-icon-button :is(
+  image,
+  .toolbarbutton-icon
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]) :is(
+  toolbarbutton,
+  .urlbar-page-action
+):hover {
+  background-color: color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]) :is(
+  toolbarbutton,
+  .urlbar-page-action
+):hover :is(
+  image,
+  svg,
+  .toolbarbutton-icon,
+  .toolbarbutton-badge-stack,
+  .urlbar-icon
+) {
+  background-color: transparent !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  .tabbrowser-tab:hover,
+  .tab-group-label-container:hover,
+  #zen-current-workspace-indicator-container:hover,
+  #zen-sidebar-top-buttons toolbarbutton:hover,
+  #zen-sidebar-foot-buttons toolbarbutton:hover
+) {
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  .tabbrowser-tab[selected],
+  .tabbrowser-tab[multiselected]
+) {
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  .tabbrowser-tab[selected],
+  .tabbrowser-tab[multiselected]
+) :is(
+  .tab-label,
+  .tab-label-container,
+  .tab-icon-image,
+  .tab-icon-overlay,
+  label,
+  image
+) {
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] zen-folder > .tab-group-label-container:hover :is(
+  .tab-group-label-container,
+  .tab-group-label,
+  label,
+  image
+),
+:root[data-omazen-enabled="true"] :is(
+  #tabs-newtab-button,
+  #vertical-tabs-newtab-button
+):hover :is(
+  label,
+  image,
+  .toolbarbutton-text,
+  .toolbarbutton-icon
+),
+:root[data-omazen-enabled="true"] #zen-current-workspace-indicator-container:hover :is(
+  label,
+  image,
+  .toolbarbutton-text,
+  .toolbarbutton-icon
+),
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator:hover :is(
+  .zen-current-workspace-indicator-name,
+  .zen-current-workspace-indicator-icon,
+  .zen-current-workspace-indicator-chevron,
+  label,
+  image
+) {
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
 :root[data-omazen-enabled="true"] :is(
   .tabbrowser-tab[selected] .tab-background,
   .tabbrowser-tab[multiselected] .tab-background
 ) {
-  background: var(--omazen-selection) !important;
-  color: var(--omazen-foreground) !important;
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
   outline-color: var(--omazen-accent) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
-  menupopup,
-  panel,
   panelmultiview,
   .panel-arrowcontent,
   .panel-subview-body,
   #zen-sidebar-web-panel,
   #sidebar-box
 ) {
-  --panel-background: var(--omazen-background-dark) !important;
+  --panel-background: var(--omazen-background) !important;
   --panel-color: var(--omazen-foreground) !important;
-  background-color: var(--omazen-background-dark) !important;
+  --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+  background-color: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
   border-color: var(--omazen-border) !important;
+}
+
+/* Keep popup-window shadow margins transparent. The visible surface lives in
+ * ::part(content); painting the host produces an opaque square halo. */
+:root[data-omazen-enabled="true"] :is(menupopup, panel) {
+  --panel-background: var(--omazen-background) !important;
+  --panel-color: var(--omazen-foreground) !important;
+  --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+  background-color: transparent !important;
+  color: var(--omazen-foreground) !important;
+  border-color: transparent !important;
+}
+
+:root[data-omazen-enabled="true"] :is(menupopup, panel)::part(content) {
+  background: var(--omazen-background) !important;
+  color: var(--omazen-foreground) !important;
+  border-color: var(--omazen-border) !important;
+  box-shadow: var(--panel-box-shadow) !important;
+}
+
+/* Context menus belong visually to the browser chrome next to the sidebar,
+ * while panels remain intentionally recessed. Match menu surfaces to the
+ * sidebar and keep the existing selection color for active rows. */
+:root[data-omazen-enabled="true"] menupopup {
+  --panel-background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] menupopup::part(content) {
+  background: var(--omazen-background) !important;
+}
+
+/* Linux gives XUL tooltips a native GTK surface and an environment-provided
+ * radius. Mixing that surface with theme colors leaves bright corner wedges.
+ * Paint the complete tooltip ourselves so its fill, edge and radius agree. */
+:root[data-omazen-enabled="true"] tooltip,
+:root[data-omazen-enabled="true"] #aHTMLTooltip {
+  appearance: none !important;
+  -moz-default-appearance: none !important;
+  background: var(--omazen-background) !important;
+  color: var(--omazen-foreground) !important;
+  border: 1px solid var(--omazen-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--panel-box-shadow) !important;
 }
 
 /* XUL menuitems use native system colors for the active row unless the
@@ -398,10 +839,7 @@
 
 :root[data-omazen-enabled="true"] :is(
   #tabbrowser-tabbox,
-  #tabbrowser-tabpanels,
-  .browserSidebarContainer,
-  .zen-glance-overlay,
-  #zen-glance-background
+  #tabbrowser-tabpanels
 ) {
   background-color: var(--omazen-background-dark) !important;
   border-color: var(--omazen-border) !important;
@@ -411,9 +849,155 @@
   outline-color: var(--omazen-border) !important;
 }
 
+/* The Glance overlay host fills the entire content area. It must remain
+ * transparent so the recessed parent page is visible around the 80% preview;
+ * only the nested browserStack is an opaque, elevated surface. */
+:root[data-omazen-enabled="true"] .browserSidebarContainer.zen-glance-overlay {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+:root[data-omazen-enabled="true"] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
+  box-sizing: border-box;
+  border-radius: var(--omazen-content-radius) !important;
+  background-color: var(--omazen-background) !important;
+  box-shadow: var(--omazen-content-shadow) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-glance-sidebar-container toolbarbutton {
+  background: var(--omazen-background-dark) !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+  stroke: var(--omazen-foreground) !important;
+  border: 1px solid var(--omazen-border) !important;
+  box-shadow: var(--panel-box-shadow) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-glance-sidebar-container toolbarbutton :is(
+  image,
+  svg,
+  path,
+  .toolbarbutton-icon
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: inherit !important;
+  fill: currentColor !important;
+  fill-opacity: 1 !important;
+  stroke: currentColor !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-glance-sidebar-container toolbarbutton:hover:not([waitconfirmation]) {
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  stroke: var(--omazen-accent-foreground) !important;
+  border-color: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) :is(
+  #zen-tabbox-wrapper,
+  #tabbrowser-tabbox,
+  #tabbrowser-tabpanels,
+  .browserSidebarContainer.deck-selected
+) {
+  background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper {
+  box-sizing: border-box;
+  border-radius: var(--omazen-content-radius) !important;
+  box-shadow: var(--omazen-content-shadow) !important;
+  overflow: clip;
+}
+
+:root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper::after {
+  content:
+    "███████╗███████╗███╗   ██╗" "\A"
+    "╚══███╔╝██╔════╝████╗  ██║" "\A"
+    "  ███╔╝ █████╗  ██╔██╗ ██║" "\A"
+    " ███╔╝  ██╔══╝  ██║╚██╗██║" "\A"
+    "███████╗███████╗██║ ╚████║" "\A"
+    "╚══════╝╚══════╝╚═╝  ╚═══╝";
+  position: absolute;
+  display: block !important;
+  width: max-content;
+  height: max-content;
+  inset: 50% auto auto 50%;
+  z-index: 999;
+  translate: -50% -50%;
+  color: var(--omazen-accent);
+  font: 600 clamp(12px, 1.3vw, 26px) / 1.05 monospace;
+  text-align: left;
+  white-space: pre;
+  opacity: 0.68;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 800px), (max-height: 600px) {
+  :root[data-omazen-enabled="true"][zen-has-empty-tab="true"] #zen-tabbox-wrapper::after {
+    display: none !important;
+  }
+}
+
+:root[data-omazen-enabled="true"] #zen-sidebar-splitter::before {
+  background: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] .browserStack {
+  background-color: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] .browserStack > browser[type="content"] {
+  background-color: transparent !important;
+}
+
+:root[data-omazen-enabled="true"]:not([sizemode="fullscreen"]) :is(
+  .browserSidebarContainer:not(.zen-glance-overlay) .browserStack,
+  .browserSidebarContainer:not(.zen-glance-overlay) .browserStack > browser[type="content"]
+) {
+  clip-path: inset(0 round var(--omazen-content-radius)) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #tabbrowser-tabbox,
+  #tabbrowser-tabpanels
+) {
+  background-color: var(--omazen-background) !important;
+}
+
 :root[data-omazen-enabled="true"] ::selection {
   background-color: var(--omazen-selection) !important;
   color: var(--omazen-foreground) !important;
+}
+
+/* The generic toolbar hover treatment is intentionally broad for future
+ * actions, but Clear is an inline action rather than a toolbar tile. Keep its
+ * surface neutral and move both its arrow and label to the accent. */
+:root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover {
+  --toolbarbutton-background-color-hover: transparent !important;
+  background: transparent !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+  stroke: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover :is(
+  image,
+  .toolbarbutton-icon
+) {
+  background: transparent !important;
+  color: var(--omazen-accent) !important;
+  fill: var(--omazen-accent) !important;
+  stroke: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover :is(
+  label,
+  .toolbarbutton-text
+) {
+  background: transparent !important;
+  color: var(--omazen-accent) !important;
 }
 
 /* A web page's <select> dropdown is content UI, not chrome.
