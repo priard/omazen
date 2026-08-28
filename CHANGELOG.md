@@ -4,6 +4,34 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-08-28
+
+### Fixed
+
+- Restored the contrasting folder label color on hover by keeping the inline
+  rename input's ID specificity out of the normal label selector.
+
+## [1.5.3] - 2026-08-28
+
+### Fixed
+
+- Applied the active foreground to Zen folder names and their inline rename
+  fields in restored and additional windows.
+
+## [1.5.2] - 2026-08-28
+
+### Fixed
+
+- Kept restored and additional window sidebars on the active Omazen foreground
+  without changing browser-wide color inheritance.
+
+## [1.5.1] - 2026-08-28
+
+### Fixed
+
+- Invalidated Zen's cached chrome stylesheet after restoring browser chrome
+  color inheritance.
+
 ## [1.5.0] - 2026-08-27
 
 ### Changed
