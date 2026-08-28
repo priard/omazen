@@ -4,6 +4,13 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-08-28
+
+### Fixed
+
+- Invalidated Zen's cached chrome stylesheet after restoring browser chrome
+  color inheritance.
+
 ## [1.5.0] - 2026-08-27
 
 ### Changed
