@@ -272,6 +272,12 @@ grep -Fq -- '.pinned-tabs-container-separator toolbarbutton:hover' \
   "$CHROME_CSS" || fail "Clear button hover contrast surface"
 grep -Fq -- '--zen-loading-progress-bar-color: var(--omazen-accent)' \
   "$CHROME_CSS" || fail "Zen loading indicator follows the Omarchy accent"
+grep -A8 -F -- ':is(menupopup, panel) {' \
+  "$CHROME_CSS" | grep -Fq -- '--panel-background: var(--omazen-background)' || \
+  fail "browser panels match the sidebar surface"
+grep -A8 -F -- '.pinned-tabs-container-separator toolbarbutton:hover :is(' \
+  "$CHROME_CSS" | grep -Fq -- 'fill: var(--omazen-accent)' || \
+  fail "Clear arrow and label share the accent hover state"
 grep -Fq -- 'zen-folder > .tab-group-label-container:hover :is(' \
   "$CHROME_CSS" || fail "folder hover is scoped to its direct label container"
 if grep -Fq -- 'zen-folder:hover :is(' "$CHROME_CSS"; then
@@ -386,8 +392,10 @@ grep -A7 -F -- ':root[data-omazen-enabled="true"] #aHTMLTooltip {' \
   fail "native tooltips match the sidebar surface"
 grep -Fq -- '--background-color-canvas: var(--omazen-background)' \
   "$CONTENT_CSS" || fail "Settings canvas palette"
-grep -Fq -- '--input-text-background-color: var(--omazen-background-dark)' \
+grep -Fq -- '--input-text-background-color: var(--omazen-settings-control-background)' \
   "$CONTENT_CSS" || fail "Settings search palette"
+grep -Fq -- '--omazen-settings-control-background: color-mix(' \
+  "$CONTENT_CSS" || fail "light Settings controls soften legacy derived surfaces"
 grep -Fq -- '--theme-bg-color: var(--omazen-background-light)' \
   "$CONTENT_CSS" || fail "managed notice palette"
 grep -Fq -- '--checkbox-background-color-checked: var(--omazen-accent)' \

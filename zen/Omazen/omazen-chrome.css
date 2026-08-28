@@ -530,10 +530,10 @@
   #zen-sidebar-web-panel,
   #sidebar-box
 ) {
-  --panel-background: var(--omazen-background-dark) !important;
+  --panel-background: var(--omazen-background) !important;
   --panel-color: var(--omazen-foreground) !important;
   --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
-  background-color: var(--omazen-background-dark) !important;
+  background-color: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
   border-color: var(--omazen-border) !important;
 }
@@ -541,7 +541,7 @@
 /* Keep popup-window shadow margins transparent. The visible surface lives in
  * ::part(content); painting the host produces an opaque square halo. */
 :root[data-omazen-enabled="true"] :is(menupopup, panel) {
-  --panel-background: var(--omazen-background-dark) !important;
+  --panel-background: var(--omazen-background) !important;
   --panel-color: var(--omazen-foreground) !important;
   --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
   background-color: transparent !important;
@@ -550,7 +550,7 @@
 }
 
 :root[data-omazen-enabled="true"] :is(menupopup, panel)::part(content) {
-  background: var(--omazen-background-dark) !important;
+  background: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
   border-color: var(--omazen-border) !important;
   box-shadow: var(--panel-box-shadow) !important;
@@ -972,8 +972,8 @@
 }
 
 /* The generic toolbar hover treatment is intentionally broad for future
- * actions, but Clear is an inline text action rather than a toolbar tile.
- * Keep its surface and arrow neutral; only the label receives the accent. */
+ * actions, but Clear is an inline action rather than a toolbar tile. Keep its
+ * surface neutral and move both its arrow and label to the accent. */
 :root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover {
   --toolbarbutton-background-color-hover: transparent !important;
   background: transparent !important;
@@ -987,9 +987,9 @@
   .toolbarbutton-icon
 ) {
   background: transparent !important;
-  color: var(--omazen-foreground) !important;
-  fill: var(--omazen-foreground) !important;
-  stroke: var(--omazen-foreground) !important;
+  color: var(--omazen-accent) !important;
+  fill: var(--omazen-accent) !important;
+  stroke: var(--omazen-accent) !important;
 }
 
 :root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover :is(
