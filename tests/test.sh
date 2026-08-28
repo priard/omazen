@@ -214,6 +214,11 @@ grep -Fq -- '--zen-urlbar-background-transparent: var(--omazen-background-light)
   "$CHROME_CSS" || fail "expanded URL bar background"
 grep -Fq -- '#urlbar:is([focused="true"], [breakout-extend]) .urlbar-background' \
   "$CHROME_CSS" || fail "focused URL bar outline"
+grep -Fq -- 'zen-folder > .tab-group-label-container:hover :is(' \
+  "$CHROME_CSS" || fail "folder hover is scoped to its direct label container"
+if grep -Fq -- 'zen-folder:hover :is(' "$CHROME_CSS"; then
+  fail "folder hover must not recolor nested tabs"
+fi
 grep -Fq -- ':not([zen-compact-mode="true"]) #navigator-toolbox' \
   "$CHROME_CSS" || fail "non-compact toolbox palette"
 grep -Fq -- '[zen-compact-mode="true"] .zen-toolbar-background' \

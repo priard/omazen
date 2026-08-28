@@ -319,7 +319,7 @@
   fill: var(--omazen-selection-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] zen-folder:hover :is(
+:root[data-omazen-enabled="true"] zen-folder > .tab-group-label-container:hover :is(
   .tab-group-label-container,
   .tab-group-label,
   label,
