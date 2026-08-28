@@ -67,7 +67,6 @@
   --toolbox-textcolor-inactive: var(--omazen-foreground) !important;
   --toolbar-color: var(--omazen-foreground) !important;
   --toolbar-field-color: var(--omazen-foreground) !important;
-  color: var(--omazen-foreground) !important;
 }
 
 /* Zen's native vertical-tab dividers use a fixed 10% light-dark overlay,
