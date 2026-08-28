@@ -11,6 +11,19 @@ restarting Zen after the one-time privileged-loader setup.
 > attributed to the upstream maintainer. This fork was materially modified in
 > August 2026; see the commit history and [NOTICE](NOTICE) for details.
 
+## Preview
+
+The opinionated browser chrome follows the active Omarchy palette across light
+and dark themes.
+
+### Light theme
+
+![Omazen with a light Omarchy theme](docs/screenshots/omazen-light.png)
+
+### Dark theme
+
+![Omazen with a dark Omarchy theme](docs/screenshots/omazen-dark.png)
+
 The runtime normalizes Quattro colors into a fixed JSON file, applies them to
 Zen chrome through a privileged bridge, and uses allowlisted WindowActors for
 supported internal pages. A shared `inotifywait` subprocess wakes every open
