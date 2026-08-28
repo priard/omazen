@@ -272,14 +272,6 @@ grep -Fq -- '.pinned-tabs-container-separator toolbarbutton:hover' \
   "$CHROME_CSS" || fail "Clear button hover contrast surface"
 grep -Fq -- '--zen-loading-progress-bar-color: var(--omazen-accent)' \
   "$CHROME_CSS" || fail "Zen loading indicator follows the Omarchy accent"
-grep -Fq -- ':root[data-omazen-enabled="true"][zen-unsynced-window="true"] {' \
-  "$CHROME_CSS" || fail "secondary Zen windows receive the Omazen chrome palette"
-grep -Fq -- '--toolbox-textcolor-inactive: var(--omazen-foreground) !important;' \
-  "$CHROME_CSS" || fail "secondary Zen window sidebar text uses the Omazen foreground"
-if grep -A7 -F -- ':root[data-omazen-enabled="true"][zen-unsynced-window="true"] {' \
-  "$CHROME_CSS" | grep -Fq -- '  color:'; then
-  fail "secondary-window compatibility must not recolor the entire browser root"
-fi
 grep -A8 -F -- ':is(menupopup, panel) {' \
   "$CHROME_CSS" | grep -Fq -- '--panel-background: var(--omazen-background)' || \
   fail "browser panels match the sidebar surface"

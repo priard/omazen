@@ -59,16 +59,6 @@
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
 }
 
-/* Zen marks every additional browser window as unsynced and gives that state
- * its own !important toolbox text color. Keep secondary-window chrome on the
- * same semantic foreground as the primary window. */
-:root[data-omazen-enabled="true"][zen-unsynced-window="true"] {
-  --toolbox-textcolor: var(--omazen-foreground) !important;
-  --toolbox-textcolor-inactive: var(--omazen-foreground) !important;
-  --toolbar-color: var(--omazen-foreground) !important;
-  --toolbar-field-color: var(--omazen-foreground) !important;
-}
-
 /* Zen's native vertical-tab dividers use a fixed 10% light-dark overlay,
  * which disappears on some Omarchy palettes. Keep every sidebar divider on
  * one semantic, theme-aware color, including the Clear/pinned-tabs row. */
