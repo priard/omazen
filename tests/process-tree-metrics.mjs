@@ -36,6 +36,8 @@ let maxAggregateRssBytes = 0;
 let maxAggregatePssBytes = 0;
 let maxProcessCount = 0;
 let sampleCount = 0;
+let aggregateRssTotalBytes = 0;
+let aggregatePssTotalBytes = 0;
 let sampling = false;
 
 async function processSnapshot(pid) {
@@ -97,6 +99,8 @@ async function sampleTree() {
     }
     maxAggregateRssBytes = Math.max(maxAggregateRssBytes, aggregateRss);
     maxAggregatePssBytes = Math.max(maxAggregatePssBytes, aggregatePss);
+    aggregateRssTotalBytes += aggregateRss;
+    aggregatePssTotalBytes += aggregatePss;
     maxProcessCount = Math.max(maxProcessCount, current.length);
     sampleCount += 1;
   } finally {
@@ -130,6 +134,8 @@ const report = {
   system_cpu_ns: Math.round((systemTicks * 1_000_000_000) / clockTicks),
   max_process_tree_rss_bytes: maxAggregateRssBytes,
   max_process_tree_pss_bytes: maxAggregatePssBytes,
+  average_process_tree_rss_bytes: sampleCount === 0 ? 0 : Math.round(aggregateRssTotalBytes / sampleCount),
+  average_process_tree_pss_bytes: sampleCount === 0 ? 0 : Math.round(aggregatePssTotalBytes / sampleCount),
   observed_processes: seen.size,
   max_concurrent_processes: maxProcessCount,
   samples: sampleCount,

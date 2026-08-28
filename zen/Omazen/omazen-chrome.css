@@ -50,8 +50,63 @@
   --tab-selected-textcolor: var(--omazen-foreground) !important;
   --omazen-scrollbar-thumb: var(--omazen-foreground-muted);
   --omazen-scrollbar-track: var(--omazen-background-dark);
+  --omazen-sidebar-separator: color-mix(
+    in srgb,
+    var(--omazen-foreground) 24%,
+    var(--omazen-background)
+  );
   --omazen-content-radius: calc(var(--zen-native-inner-radius) + 4px);
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
+}
+
+/* Zen's native vertical-tab dividers use a fixed 10% light-dark overlay,
+ * which disappears on some Omarchy palettes. Keep every sidebar divider on
+ * one semantic, theme-aware color, including the Clear/pinned-tabs row. */
+:root[data-omazen-enabled="true"] #navigator-toolbox :is(
+  .pinned-tabs-container-separator toolbarseparator,
+  .vertical-pinned-tabs-container-separator toolbarseparator,
+  #zen-sidebar-top-buttons-separator,
+  toolbarseparator
+) {
+  background: var(--omazen-sidebar-separator) !important;
+  border-color: var(--omazen-sidebar-separator) !important;
+  color: var(--omazen-sidebar-separator) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox :is(
+  .pinned-tabs-container-separator toolbarseparator,
+  .vertical-pinned-tabs-container-separator toolbarseparator,
+  #zen-sidebar-top-buttons-separator,
+  toolbarseparator
+)::before {
+  border-color: var(--omazen-sidebar-separator) !important;
+}
+
+:root[data-omazen-enabled="true"] zen-workspace > arrowscrollbox[overflowing] {
+  --zen-scrollbar-overflow-background: var(--omazen-sidebar-separator) !important;
+}
+
+:root[data-omazen-enabled="true"] zen-workspace > arrowscrollbox[overflowing]::before,
+:root[data-omazen-enabled="true"] zen-workspace > arrowscrollbox[overflowing]::after {
+  background-color: var(--omazen-sidebar-separator) !important;
+  border-radius: 999px !important;
+  left: 5% !important;
+  width: 90% !important;
+}
+
+/* Zen otherwise blends the centered loading indicator heavily with a fixed
+ * black/white overlay. Keep both its short pulse and long-load sweep tied to
+ * the current Omarchy palette. */
+:root[data-omazen-enabled="true"] #zen-loading-progress-bar {
+  --zen-loading-progress-bar-color: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-loading-progress-bar[long-load="true"] {
+  background: color-mix(
+    in srgb,
+    var(--omazen-accent) 20%,
+    var(--omazen-background)
+  ) !important;
 }
 
 :root[data-omazen-enabled="true"][data-omazen-mode="light"] {
@@ -186,8 +241,55 @@
   #identity-icon,
   #tracking-protection-icon,
   #zen-site-data-icon-button,
+  toolbarbutton,
+  .urlbar-page-action,
   .urlbar-icon,
-  .urlbar-page-action image
+  image,
+  svg,
+  path,
+  use
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+/* Toolbar extensions and new Zen actions must inherit the same contrast as
+ * built-in buttons. This intentionally keys off toolbar placement instead of
+ * individual button IDs so newly added actions remain theme-aware. */
+:root[data-omazen-enabled="true"] :is(
+  #navigator-toolbox,
+  #zen-appcontent-navbar-wrapper,
+  #zen-sidebar-top-buttons,
+  #zen-sidebar-foot-buttons
+) toolbarbutton:hover {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  --toolbarbutton-icon-fill-attention: var(--omazen-accent-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  #navigator-toolbox,
+  #zen-appcontent-navbar-wrapper,
+  #zen-sidebar-top-buttons,
+  #zen-sidebar-foot-buttons
+) toolbarbutton:hover :is(
+  image,
+  label,
+  svg,
+  path,
+  use,
+  .toolbarbutton-icon,
+  .toolbarbutton-text,
+  .toolbarbutton-badge-stack,
+  .urlbar-icon
 ) {
   -moz-context-properties: fill, stroke, fill-opacity !important;
   color: var(--omazen-accent-foreground) !important;
@@ -324,8 +426,24 @@
   stroke: var(--omazen-accent-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]) #zen-site-data-icon-button:hover {
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]) :is(
+  toolbarbutton,
+  .urlbar-page-action
+):hover {
   background-color: color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]) :is(
+  toolbarbutton,
+  .urlbar-page-action
+):hover :is(
+  image,
+  svg,
+  .toolbarbutton-icon,
+  .toolbarbutton-badge-stack,
+  .urlbar-icon
+) {
+  background-color: transparent !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -435,6 +553,20 @@
   background: var(--omazen-background-dark) !important;
   color: var(--omazen-foreground) !important;
   border-color: var(--omazen-border) !important;
+  box-shadow: var(--panel-box-shadow) !important;
+}
+
+/* Linux gives XUL tooltips a native GTK surface and an environment-provided
+ * radius. Mixing that surface with theme colors leaves bright corner wedges.
+ * Paint the complete tooltip ourselves so its fill, edge and radius agree. */
+:root[data-omazen-enabled="true"] tooltip,
+:root[data-omazen-enabled="true"] #aHTMLTooltip {
+  appearance: none !important;
+  -moz-default-appearance: none !important;
+  background: var(--omazen-background-dark) !important;
+  color: var(--omazen-foreground) !important;
+  border: 1px solid var(--omazen-border) !important;
+  border-radius: 8px !important;
   box-shadow: var(--panel-box-shadow) !important;
 }
 
@@ -696,10 +828,7 @@
 
 :root[data-omazen-enabled="true"] :is(
   #tabbrowser-tabbox,
-  #tabbrowser-tabpanels,
-  .browserSidebarContainer,
-  .zen-glance-overlay,
-  #zen-glance-background
+  #tabbrowser-tabpanels
 ) {
   background-color: var(--omazen-background-dark) !important;
   border-color: var(--omazen-border) !important;
@@ -709,11 +838,49 @@
   outline-color: var(--omazen-border) !important;
 }
 
+/* The Glance overlay host fills the entire content area. It must remain
+ * transparent so the recessed parent page is visible around the 80% preview;
+ * only the nested browserStack is an opaque, elevated surface. */
+:root[data-omazen-enabled="true"] .browserSidebarContainer.zen-glance-overlay {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
 :root[data-omazen-enabled="true"] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
   box-sizing: border-box;
   border-radius: var(--omazen-content-radius) !important;
   background-color: var(--omazen-background) !important;
   box-shadow: var(--omazen-content-shadow) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-glance-sidebar-container toolbarbutton {
+  background: var(--omazen-background-dark) !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+  stroke: var(--omazen-foreground) !important;
+  border: 1px solid var(--omazen-border) !important;
+  box-shadow: var(--panel-box-shadow) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-glance-sidebar-container toolbarbutton :is(
+  image,
+  svg,
+  path,
+  .toolbarbutton-icon
+) {
+  -moz-context-properties: fill, stroke, fill-opacity !important;
+  color: inherit !important;
+  fill: currentColor !important;
+  fill-opacity: 1 !important;
+  stroke: currentColor !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-glance-sidebar-container toolbarbutton:hover:not([waitconfirmation]) {
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  stroke: var(--omazen-accent-foreground) !important;
+  border-color: var(--omazen-accent) !important;
 }
 
 :root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) :is(
@@ -775,8 +942,8 @@
 }
 
 :root[data-omazen-enabled="true"]:not([sizemode="fullscreen"]) :is(
-  .browserStack,
-  .browserStack > browser[type="content"]
+  .browserSidebarContainer:not(.zen-glance-overlay) .browserStack,
+  .browserSidebarContainer:not(.zen-glance-overlay) .browserStack > browser[type="content"]
 ) {
   clip-path: inset(0 round var(--omazen-content-radius)) !important;
 }
@@ -791,6 +958,35 @@
 :root[data-omazen-enabled="true"] ::selection {
   background-color: var(--omazen-selection) !important;
   color: var(--omazen-foreground) !important;
+}
+
+/* The generic toolbar hover treatment is intentionally broad for future
+ * actions, but Clear is an inline text action rather than a toolbar tile.
+ * Keep its surface and arrow neutral; only the label receives the accent. */
+:root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover {
+  --toolbarbutton-background-color-hover: transparent !important;
+  background: transparent !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+  stroke: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover :is(
+  image,
+  .toolbarbutton-icon
+) {
+  background: transparent !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+  stroke: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox .pinned-tabs-container-separator toolbarbutton:hover :is(
+  label,
+  .toolbarbutton-text
+) {
+  background: transparent !important;
+  color: var(--omazen-accent) !important;
 }
 
 /* A web page's <select> dropdown is content UI, not chrome.

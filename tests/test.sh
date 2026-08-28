@@ -250,6 +250,28 @@ grep -Fq -- '--zen-urlbar-background-transparent: var(--omazen-background-light)
   "$CHROME_CSS" || fail "expanded URL bar background"
 grep -Fq -- '#urlbar:is([focused="true"], [breakout-extend]) .urlbar-background' \
   "$CHROME_CSS" || fail "focused URL bar outline"
+grep -Fq -- '#navigator-toolbox,' \
+  "$CHROME_CSS" || fail "universal toolbar hover scope"
+grep -Fq -- '--toolbarbutton-icon-fill-attention: var(--omazen-accent-foreground)' \
+  "$CHROME_CSS" || fail "attention toolbar icons use contrast foreground"
+grep -Fq -- '.urlbar-page-action,' \
+  "$CHROME_CSS" || fail "URL bar extension actions use contrast foreground"
+grep -Fq -- 'background-color: color-mix(in srgb, var(--omazen-foreground) 16%, transparent)' \
+  "$CHROME_CSS" || fail "URL bar actions share a readable hover surface"
+grep -Fq -- '--omazen-sidebar-separator: color-mix(' \
+  "$CHROME_CSS" || fail "theme-aware sidebar separator token"
+grep -Fq -- '.pinned-tabs-container-separator toolbarseparator,' \
+  "$CHROME_CSS" || fail "pinned tabs Clear separator palette"
+grep -Fq -- 'zen-workspace > arrowscrollbox[overflowing]' \
+  "$CHROME_CSS" || fail "scrolling workspace edge separators palette"
+grep -Fq -- '--zen-scrollbar-overflow-background: var(--omazen-sidebar-separator)' \
+  "$CHROME_CSS" || fail "scrolling workspace separator token"
+grep -Fq -- 'width: 90% !important;' \
+  "$CHROME_CSS" || fail "scrolling workspace separators respect sidebar insets"
+grep -Fq -- '.pinned-tabs-container-separator toolbarbutton:hover' \
+  "$CHROME_CSS" || fail "Clear button hover contrast surface"
+grep -Fq -- '--zen-loading-progress-bar-color: var(--omazen-accent)' \
+  "$CHROME_CSS" || fail "Zen loading indicator follows the Omarchy accent"
 grep -Fq -- 'zen-folder > .tab-group-label-container:hover :is(' \
   "$CHROME_CSS" || fail "folder hover is scoped to its direct label container"
 if grep -Fq -- 'zen-folder:hover :is(' "$CHROME_CSS"; then
@@ -276,6 +298,16 @@ CONTENT_SURFACE_RULE=$(sed -n \
 if grep -Eq -- '^[[:space:]]*border:' <<< "$CONTENT_SURFACE_RULE"; then
   fail "content elevation must not add a flat border"
 fi
+grep -Fq -- '.zen-glance-sidebar-container toolbarbutton:hover:not([waitconfirmation]) {' \
+  "$CHROME_CSS" || fail "Glance controls use the Omarchy hover palette"
+grep -A3 -F -- '.browserSidebarContainer.zen-glance-overlay {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: transparent !important;' || \
+  fail "Glance overlay host leaves the parent page visible"
+if sed -n '/:is(/,/)/p' "$CHROME_CSS" | grep -Fxq '  .zen-glance-overlay,'; then
+  fail "Glance overlay must not inherit an opaque grouped surface"
+fi
+grep -Fq -- '.browserSidebarContainer:not(.zen-glance-overlay) .browserStack,' \
+  "$CHROME_CSS" || fail "Glance shadow is not clipped by the regular content mask"
 grep -Fq -- '--zen-main-browser-background-old: var(--omazen-background)' \
   "$CHROME_CSS" || fail "theme transition background override"
 ZEN_BACKGROUND_RULE=$(sed -n \
@@ -305,9 +337,6 @@ grep -Fq -- '[zen-compact-mode="true"] .zen-toolbar-background' \
   "$CHROME_CSS" || fail "compact rounded background palette"
 grep -Fq -- '--zen-navigator-toolbox-background: transparent' \
   "$CHROME_CSS" || fail "compact rectangular toolbox transparency"
-if grep -Fxq -- '  #navigator-toolbox,' "$CHROME_CSS"; then
-  fail "compact rectangular toolbox must remain transparent"
-fi
 COMPACT_BACKGROUND_RULE=$(sed -n \
   '/\[zen-compact-mode="true"\] \.zen-toolbar-background {/,/^}/p' \
   "$CHROME_CSS")
@@ -347,6 +376,8 @@ grep -A3 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([
 grep -A4 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
   "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground)' || \
   fail "context menu hover text palette"
+grep -Fq -- ':root[data-omazen-enabled="true"] #aHTMLTooltip {' \
+  "$CHROME_CSS" || fail "native HTML tooltip has a complete theme surface"
 grep -Fq -- '--background-color-canvas: var(--omazen-background)' \
   "$CONTENT_CSS" || fail "Settings canvas palette"
 grep -Fq -- '--input-text-background-color: var(--omazen-background-dark)' \
