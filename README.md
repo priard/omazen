@@ -34,7 +34,7 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.5.1` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.5.2` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
 the qualified command and rollback contracts. Canonical stylesheet sources
 remain unversioned in the repository and are installed under release-versioned

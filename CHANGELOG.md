@@ -4,6 +4,13 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-08-28
+
+### Fixed
+
+- Kept restored and additional window sidebars on the active Omazen foreground
+  without changing browser-wide color inheritance.
+
 ## [1.5.1] - 2026-08-28
 
 ### Fixed
