@@ -50,15 +50,23 @@ export function contrastRatio(first, second) {
  * provider-facing v1 palette contract. Existing semantic colors are preferred
  * when they already pass; black or white is used only as a guaranteed fallback.
  */
-export function deriveAccentForeground(palette) {
+function deriveSurfaceForeground(palette, surface) {
   for (const candidate of [palette.background_dark, palette.foreground]) {
-    if (contrastRatio(palette.accent, candidate) >= ACCENT_TEXT_CONTRAST) {
+    if (contrastRatio(surface, candidate) >= ACCENT_TEXT_CONTRAST) {
       return candidate.toLowerCase();
     }
   }
-  return contrastRatio(palette.accent, BLACK) >= contrastRatio(palette.accent, WHITE)
+  return contrastRatio(surface, BLACK) >= contrastRatio(surface, WHITE)
     ? BLACK
     : WHITE;
+}
+
+export function deriveAccentForeground(palette) {
+  return deriveSurfaceForeground(palette, palette.accent);
+}
+
+export function selectionForeground(palette) {
+  return deriveSurfaceForeground(palette, palette.selection);
 }
 
 const PALETTE_KEYS = Object.freeze(["schema_version", "mode", ...COLOR_KEYS]);
@@ -109,19 +117,21 @@ export function setRootPalette(root, palette, enabled) {
     root.removeAttribute("data-omazen-enabled");
     root.removeAttribute("data-omazen-mode");
     root.style.removeProperty("color-scheme");
-    root.style.removeProperty("--omazen-accent-foreground");
     for (const key of COLOR_KEYS) {
       root.style.removeProperty(`--omazen-${key.replaceAll("_", "-")}`);
     }
+    root.style.removeProperty("--omazen-accent-foreground");
+    root.style.removeProperty("--omazen-selection-foreground");
     return false;
   }
 
   root.setAttribute("data-omazen-enabled", "true");
   root.setAttribute("data-omazen-mode", palette.mode);
   root.style.setProperty("color-scheme", palette.mode);
-  root.style.setProperty("--omazen-accent-foreground", deriveAccentForeground(palette));
   for (const key of COLOR_KEYS) {
     root.style.setProperty(`--omazen-${key.replaceAll("_", "-")}`, palette[key]);
   }
+  root.style.setProperty("--omazen-accent-foreground", deriveAccentForeground(palette));
+  root.style.setProperty("--omazen-selection-foreground", selectionForeground(palette));
   return true;
 }

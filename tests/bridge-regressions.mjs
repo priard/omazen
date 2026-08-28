@@ -64,6 +64,15 @@ assert.equal(
   "#ffffff",
   "accent foreground should fall back to white when black is insufficient",
 );
+assert.equal(
+  paletteModule.selectionForeground({
+    selection: "#203060",
+    foreground: "#f0f4ff",
+    background_dark: "#101522",
+  }),
+  "#f0f4ff",
+  "dark selections should receive the higher-contrast light palette color",
+);
 
 class FakeFile {
   constructor(path = "") {

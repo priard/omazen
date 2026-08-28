@@ -12,6 +12,19 @@ source code:
 
 Required Notice: Omazen contributors — https://github.com/hemagome/omazen
 
+Modified version notice
+-----------------------
+
+This repository is an unofficial, opinionated fork maintained at
+https://github.com/priard/omazen. It contains material modifications made in
+August 2026, including Omarchy-native Zen styling, theme compatibility,
+integration, lifecycle, test and benchmark changes. Those modifications are
+not an official release of, and should not be attributed to, the upstream
+maintainer.
+
+The modified work remains licensed as a whole under GPL-3.0-only. The original
+project attribution above and the complete upstream Git history are preserved.
+
 The files under `vendor/fx-autoconfig` are third-party MPL 2.0 software and
 are not relicensed under the GPL. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)
 for their provenance and license terms.

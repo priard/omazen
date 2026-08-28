@@ -74,9 +74,11 @@ EOF
 LATENCY="$OUTPUT_DIR/latency.csv"
 CPU="$OUTPUT_DIR/cpu.csv"
 MEMORY="$OUTPUT_DIR/memory.csv"
+RESOURCES="$OUTPUT_DIR/resources.csv"
 printf 'implementation,scenario,run,iteration,outcome,wall_ns,warnings\n' >"$LATENCY"
 printf 'implementation,scenario,run,iteration,user_cpu_ns,system_cpu_ns,observed_processes,max_concurrent_processes\n' >"$CPU"
 printf 'implementation,scenario,run,iteration,max_process_tree_rss_bytes,max_process_tree_pss_bytes,samples\n' >"$MEMORY"
+printf 'implementation,scenario,run,iterations,wall_seconds,user_seconds,system_seconds,average_rss_bytes,average_pss_bytes,max_rss_bytes,max_pss_bytes,samples\n' >"$RESOURCES"
 
 implementation=${OMAZEN_IMPLEMENTATION:-$(basename -- "$OMAZEN_BIN")}
 git_commit=$(git -C "$PROJECT_ROOT" rev-parse HEAD)
@@ -174,6 +176,27 @@ for ((run = 1; run <= RUNS; run += 1)); do
       "$(jq -r .max_process_tree_pss_bytes "$metrics_file")" \
       "$(jq -r .samples "$metrics_file")" >>"$MEMORY"
   done
+
+  resource_time=$(
+    TIMEFORMAT='%R,%U,%S'
+    # shellcheck disable=SC2016 # Positional parameters expand in the measured child shell.
+    { time bash -c 'for ((sample = 0; sample < $2; sample += 1)); do "$1" sync >/dev/null; done' \
+      omazen-resource-batch "$OMAZEN_BIN" "$ITERATIONS"; } 2>&1
+  )
+  IFS=, read -r resource_wall resource_user resource_system <<<"$resource_time"
+  resource_metrics="$TEMP_ROOT/resource-metrics-$run.json"
+  # shellcheck disable=SC2016 # Positional parameters expand in the measured child shell.
+  node "$PROJECT_ROOT/tests/process-tree-metrics.mjs" -- \
+    bash -c 'for ((sample = 0; sample < $2; sample += 1)); do "$1" sync >/dev/null; done' \
+    omazen-resource-batch "$OMAZEN_BIN" "$ITERATIONS" >"$resource_metrics"
+  printf '%s,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+    "$implementation" cli-sync-batch "$run" "$ITERATIONS" \
+    "$resource_wall" "$resource_user" "$resource_system" \
+    "$(jq -r .average_process_tree_rss_bytes "$resource_metrics")" \
+    "$(jq -r .average_process_tree_pss_bytes "$resource_metrics")" \
+    "$(jq -r .max_process_tree_rss_bytes "$resource_metrics")" \
+    "$(jq -r .max_process_tree_pss_bytes "$resource_metrics")" \
+    "$(jq -r .samples "$resource_metrics")" >>"$RESOURCES"
 done
 
 node "$PROJECT_ROOT/tests/generate-benchmark-report.mjs" "$OUTPUT_DIR"

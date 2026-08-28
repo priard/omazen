@@ -29,6 +29,7 @@
   const {
     COLOR_KEYS,
     actorPayload,
+    selectionForeground,
     deriveAccentForeground,
     setRootPalette,
     validatePalette,
@@ -165,6 +166,7 @@
     const accentForeground = deriveAccentForeground(palette);
     const hover = `color-mix(in srgb, ${palette.background_light} 82%, ${palette.accent})`;
     const accentHover = `color-mix(in srgb, ${palette.accent} 82%, ${palette.foreground})`;
+    const selectionText = selectionForeground(palette);
     return `
 @-moz-document url("about:logins"), url-prefix("chrome://browser/content/aboutlogins/"),
   url("about:translations"), url-prefix("chrome://global/content/translations/"),
@@ -173,12 +175,13 @@
   :root {
     color-scheme: ${palette.mode} !important;
     --omazen-accent: ${palette.accent} !important;
+    --omazen-accent-foreground: ${accentForeground} !important;
+    --omazen-selection-foreground: ${selectionText} !important;
     --omazen-background: ${palette.background} !important;
     --omazen-background-dark: ${palette.background_dark} !important;
     --omazen-background-light: ${palette.background_light} !important;
     --omazen-foreground: ${palette.foreground} !important;
     --omazen-foreground-muted: ${palette.foreground_muted} !important;
-    --omazen-accent-foreground: ${accentForeground} !important;
     --omazen-action-text: var(--omazen-foreground) !important;
     --omazen-secondary-text: color-mix(in srgb, var(--omazen-foreground-muted) 40%, var(--omazen-foreground)) !important;
     --omazen-disabled-text: var(--omazen-foreground-muted) !important;

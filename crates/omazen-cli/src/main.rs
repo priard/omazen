@@ -1462,32 +1462,40 @@ fn install_user_file(
     record_owned_file(manifest, destination, &source_hash)
 }
 
-fn install_program_file(
+fn install_program_files(
     paths: &RuntimePaths,
-    source: &Path,
-    destination: &Path,
-    mode: u32,
+    requested: &[(PathBuf, PathBuf, u32)],
 ) -> Result<(), String> {
-    let source_hash = sha256_file(source).map_err(|error| error.to_string())?;
-    if destination.is_file() {
-        let destination_hash = sha256_file(destination).map_err(|error| error.to_string())?;
-        if destination_hash == source_hash {
-            println!("Reusing identical program file: {}", destination.display());
-            return Ok(());
+    let mut pending = Vec::new();
+    for (source, destination, mode) in requested {
+        let source_hash = sha256_file(source).map_err(|error| error.to_string())?;
+        if destination.is_file() {
+            let destination_hash = sha256_file(destination).map_err(|error| error.to_string())?;
+            if destination_hash == source_hash {
+                println!("Reusing identical program file: {}", destination.display());
+                continue;
+            }
+            if manifest_hash(&paths.program_manifest, destination).is_none() {
+                return Err(format!(
+                    "refusing to overwrite unowned program file: {}",
+                    destination.display()
+                ));
+            }
+            backup_owned_file(paths, destination)?;
         }
-        if manifest_hash(&paths.program_manifest, destination).is_none() {
-            return Err(format!(
-                "refusing to overwrite unowned program file: {}",
-                destination.display()
-            ));
-        }
-        backup_owned_file(paths, destination)?;
+        pending.push((source.clone(), destination.clone(), *mode, source_hash));
     }
-    privileged_install(source, destination, mode)?;
-    record_owned_file(&paths.program_manifest, destination, &source_hash)
+    privileged_install_many(&pending)?;
+    for (_, destination, _, source_hash) in pending {
+        record_owned_file(&paths.program_manifest, &destination, &source_hash)?;
+    }
+    Ok(())
 }
 
-fn privileged_install(source: &Path, destination: &Path, mode: u32) -> Result<(), String> {
+fn privileged_install_many(files: &[(PathBuf, PathBuf, u32, String)]) -> Result<(), String> {
+    if files.is_empty() {
+        return Ok(());
+    }
     let testing = env::var_os("OMAZEN_TESTING").as_deref() == Some(OsStr::new("1"));
     let effective_root = fs::read_to_string("/proc/self/status")
         .ok()
@@ -1499,12 +1507,14 @@ fn privileged_install(source: &Path, destination: &Path, mode: u32) -> Result<()
         })
         .unwrap_or(false);
     if testing || effective_root {
-        if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        for (source, destination, mode, _) in files {
+            if let Some(parent) = destination.parent() {
+                fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+            }
+            fs::copy(source, destination).map_err(|error| error.to_string())?;
+            fs::set_permissions(destination, fs::Permissions::from_mode(*mode))
+                .map_err(|error| error.to_string())?;
         }
-        fs::copy(source, destination).map_err(|error| error.to_string())?;
-        fs::set_permissions(destination, fs::Permissions::from_mode(mode))
-            .map_err(|error| error.to_string())?;
         return Ok(());
     }
     use std::io::IsTerminal;
@@ -1513,24 +1523,20 @@ fn privileged_install(source: &Path, destination: &Path, mode: u32) -> Result<()
     } else {
         "pkexec"
     };
-    let parent = destination
-        .parent()
-        .ok_or_else(|| "destination has no parent".to_owned())?;
-    let mkdir = Command::new(helper)
-        .args([OsStr::new("mkdir"), OsStr::new("-p"), parent.as_os_str()])
-        .status()
-        .map_err(|error| error.to_string())?;
-    if !mkdir.success() {
-        return Err(String::new());
+    let mut command = Command::new(helper);
+    command.args([
+        OsStr::new("sh"),
+        OsStr::new("-c"),
+        OsStr::new("while [ \"$#\" -gt 0 ]; do install -D -m \"$1\" -- \"$2\" \"$3\" || exit; shift 3; done"),
+        OsStr::new("omazen-program-install"),
+    ]);
+    for (source, destination, mode, _) in files {
+        command
+            .arg(format!("{mode:o}"))
+            .arg(source)
+            .arg(destination);
     }
-    let install = Command::new(helper)
-        .arg("install")
-        .arg("-m")
-        .arg(format!("{mode:o}"))
-        .arg(source)
-        .arg(destination)
-        .status()
-        .map_err(|error| error.to_string())?;
+    let install = command.status().map_err(|error| error.to_string())?;
     if install.success() {
         Ok(())
     } else {
@@ -1542,6 +1548,7 @@ fn install_program_loader(paths: &RuntimePaths) -> Result<(), String> {
     let config = paths.zen_program_dir.join("config.js");
     let prefs = paths.zen_program_dir.join("defaults/pref/config-prefs.js");
     let omazen_prefs = paths.zen_program_dir.join("defaults/pref/omazen-prefs.js");
+    let mut requested = Vec::new();
     if program_has_compatible_fx(&paths.zen_program_dir) {
         println!("Reusing compatible fx-autoconfig program loader.");
     } else if config.is_file()
@@ -1555,22 +1562,20 @@ fn install_program_loader(paths: &RuntimePaths) -> Result<(), String> {
                 .to_owned(),
         );
     } else {
-        install_program_file(
-            paths,
-            &paths
+        requested.push((
+            paths
                 .project_root
                 .join("vendor/fx-autoconfig/program/config.js"),
-            &config,
+            config,
             0o644,
-        )?;
-        install_program_file(
-            paths,
-            &paths
+        ));
+        requested.push((
+            paths
                 .project_root
                 .join("vendor/fx-autoconfig/program/defaults/pref/config-prefs.js"),
-            &prefs,
+            prefs,
             0o644,
-        )?;
+        ));
     }
     if omazen_prefs.is_file() && manifest_hash(&paths.program_manifest, &omazen_prefs).is_none() {
         let hash = sha256_file(&omazen_prefs).map_err(|error| error.to_string())?;
@@ -1582,12 +1587,12 @@ fn install_program_loader(paths: &RuntimePaths) -> Result<(), String> {
             );
         }
     }
-    install_program_file(
-        paths,
-        &paths.project_root.join("zen/omazen-prefs.js"),
-        &omazen_prefs,
+    requested.push((
+        paths.project_root.join("zen/omazen-prefs.js"),
+        omazen_prefs,
         0o644,
-    )
+    ));
+    install_program_files(paths, &requested)
 }
 
 fn profile_has_compatible_fx(profile: &Path) -> bool {
@@ -1815,8 +1820,18 @@ fn remove_owned_file(manifest: &Path, path: &Path, program: bool) -> Result<bool
 }
 
 fn privileged_remove(path: &Path) -> Result<(), String> {
+    privileged_remove_many(&[path.to_path_buf()])
+}
+
+fn privileged_remove_many(paths: &[PathBuf]) -> Result<(), String> {
+    if paths.is_empty() {
+        return Ok(());
+    }
     if env::var_os("OMAZEN_TESTING").as_deref() == Some(OsStr::new("1")) {
-        return remove_if_exists(path).map_err(|error| error.to_string());
+        for path in paths {
+            remove_if_exists(path).map_err(|error| error.to_string())?;
+        }
+        return Ok(());
     }
     let effective_root = fs::read_to_string("/proc/self/status")
         .ok()
@@ -1828,7 +1843,10 @@ fn privileged_remove(path: &Path) -> Result<(), String> {
         })
         .unwrap_or(false);
     if effective_root {
-        return remove_if_exists(path).map_err(|error| error.to_string());
+        for path in paths {
+            remove_if_exists(path).map_err(|error| error.to_string())?;
+        }
+        return Ok(());
     }
     use std::io::IsTerminal;
     let helper = if std::io::stdin().is_terminal() && std::io::stdout().is_terminal() {
@@ -1837,7 +1855,13 @@ fn privileged_remove(path: &Path) -> Result<(), String> {
         "pkexec"
     };
     let status = Command::new(helper)
-        .args([OsStr::new("rm"), OsStr::new("-f"), path.as_os_str()])
+        .args([
+            OsStr::new("sh"),
+            OsStr::new("-c"),
+            OsStr::new("rm -f -- \"$@\""),
+            OsStr::new("omazen-program-remove"),
+        ])
+        .args(paths)
         .status()
         .map_err(|error| error.to_string())?;
     if status.success() {
@@ -1906,6 +1930,7 @@ fn uninstall() -> Result<(), String> {
             leftovers = true;
         }
     }
+    let mut program_removals = Vec::new();
     for path in manifest_entries(&paths.program_manifest)
         .into_iter()
         .map(|(path, _)| path)
@@ -1920,9 +1945,28 @@ fn uninstall() -> Result<(), String> {
             );
             continue;
         }
-        if !remove_owned_file(&paths.program_manifest, &path, true)? {
-            leftovers = true;
+        let Some(expected) = manifest_hash(&paths.program_manifest, &path) else {
+            continue;
+        };
+        if !path.exists() {
+            forget_owned_file(&paths.program_manifest, &path)?;
+            continue;
         }
+        let current = sha256_file(&path).map_err(|error| error.to_string())?;
+        if current != expected {
+            eprintln!(
+                "WARNING: leaving modified program file in place: {}",
+                path.display()
+            );
+            leftovers = true;
+            continue;
+        }
+        program_removals.push(path);
+    }
+    privileged_remove_many(&program_removals)?;
+    for path in program_removals {
+        println!("Removed: {}", path.display());
+        forget_owned_file(&paths.program_manifest, &path)?;
     }
     for profile in zen_profiles(&paths) {
         for directory in [
@@ -2014,6 +2058,10 @@ fn ensure_state_dirs(state_dir: &Path) -> io::Result<()> {
 }
 
 fn parse_colors_file(path: &Path) -> Result<Palette, ()> {
+    parse_colors_file_native(path).or_else(|_| parse_colors_with_omarchy(path))
+}
+
+fn parse_colors_file_native(path: &Path) -> Result<Palette, ()> {
     let file = File::open(path).map_err(|_| ())?;
     let mut values = HashMap::new();
     for line in BufReader::new(file).split(b'\n') {
@@ -2026,7 +2074,43 @@ fn parse_colors_file(path: &Path) -> Result<Palette, ()> {
         }
     }
 
-    let mode = required(&values, "mode")?;
+    palette_from_values(&values)
+}
+
+fn parse_colors_with_omarchy(path: &Path) -> Result<Palette, ()> {
+    let output = Command::new("omarchy-theme-color")
+        .arg("--file")
+        .arg(path)
+        .arg("--all")
+        .output()
+        .map_err(|_| ())?;
+    if !output.status.success() {
+        return Err(());
+    }
+    parse_resolved_colors(&output.stdout)
+}
+
+fn parse_resolved_colors(output: &[u8]) -> Result<Palette, ()> {
+    let mut values = HashMap::new();
+    for line in output.split(|byte| *byte == b'\n') {
+        let Some(tab) = line.iter().position(|byte| *byte == b'\t') else {
+            continue;
+        };
+        let key = std::str::from_utf8(&line[..tab]).map_err(|_| ())?;
+        let value = std::str::from_utf8(&line[tab + 1..]).map_err(|_| ())?;
+        if !key.is_empty()
+            && key
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        {
+            values.insert(key.to_owned(), value.trim_end_matches('\r').to_owned());
+        }
+    }
+    palette_from_values(&values)
+}
+
+fn palette_from_values(values: &HashMap<String, String>) -> Result<Palette, ()> {
+    let mode = required(values, "mode")?;
     if mode != "dark" && mode != "light" {
         return Err(());
     }
@@ -2039,11 +2123,11 @@ fn parse_colors_file(path: &Path) -> Result<Palette, ()> {
         "lighter_background",
         "foreground",
     ] {
-        if !is_color(required(&values, key)?) {
+        if !is_color(required(values, key)?) {
             return Err(());
         }
     }
-    let muted = required(&values, "muted")?.to_ascii_lowercase();
+    let muted = required(values, "muted")?.to_ascii_lowercase();
     let border = values
         .get("active_border_color")
         .filter(|value| is_color(value))
@@ -2051,13 +2135,13 @@ fn parse_colors_file(path: &Path) -> Result<Palette, ()> {
         .unwrap_or_else(|| muted.clone());
     Ok(Palette {
         mode: mode.to_owned(),
-        accent: required(&values, "accent")?.to_ascii_lowercase(),
-        background: required(&values, "background")?.to_ascii_lowercase(),
-        background_dark: required(&values, "dark_background")?.to_ascii_lowercase(),
-        background_light: required(&values, "lighter_background")?.to_ascii_lowercase(),
-        foreground: required(&values, "foreground")?.to_ascii_lowercase(),
+        accent: required(values, "accent")?.to_ascii_lowercase(),
+        background: required(values, "background")?.to_ascii_lowercase(),
+        background_dark: required(values, "dark_background")?.to_ascii_lowercase(),
+        background_light: required(values, "lighter_background")?.to_ascii_lowercase(),
+        foreground: required(values, "foreground")?.to_ascii_lowercase(),
         foreground_muted: muted,
-        selection: required(&values, "selection")?.to_ascii_lowercase(),
+        selection: required(values, "selection")?.to_ascii_lowercase(),
         border,
     })
 }
@@ -2204,7 +2288,9 @@ fn write_palette_atomic(destination: &Path, palette: &Palette) -> io::Result<()>
 
 #[cfg(test)]
 mod tests {
-    use super::{Palette, canonical_palette, is_color, json_escape, parse_assignment};
+    use super::{
+        Palette, canonical_palette, is_color, json_escape, parse_assignment, parse_resolved_colors,
+    };
 
     #[test]
     fn assignment_contract() {
@@ -2247,5 +2333,17 @@ mod tests {
         };
         assert_eq!(canonical_palette(&palette).lines().count(), 12);
         assert!(canonical_palette(&palette).ends_with("}\n"));
+    }
+
+    #[test]
+    fn resolved_omarchy_colors_support_legacy_themes() {
+        let palette = parse_resolved_colors(
+            b"mode\tlight\naccent\t#85B34C\nselection\t#85b34c\nmuted\t#a09080\nbackground\t#fdf6ee\ndark_background\t#beb9b3\nlighter_background\t#fffaf3\nforeground\t#22211d\nactive_border_color\t#496c1e\n",
+        )
+        .expect("resolved palette");
+        assert_eq!(palette.mode, "light");
+        assert_eq!(palette.accent, "#85b34c");
+        assert_eq!(palette.background_dark, "#beb9b3");
+        assert_eq!(palette.border, "#496c1e");
     }
 }
