@@ -69,7 +69,9 @@
 }
 
 :root[data-omazen-enabled="true"] #navigator-toolbox
-  zen-folder > .tab-group-label-container > :is(label, #tab-label-input) {
+  zen-folder > .tab-group-label-container > label,
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container > #tab-label-input {
   color: var(--omazen-foreground) !important;
 }
 
@@ -494,7 +496,8 @@
   fill: var(--omazen-accent-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] zen-folder > .tab-group-label-container:hover :is(
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container:hover :is(
   .tab-group-label-container,
   .tab-group-label,
   label,

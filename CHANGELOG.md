@@ -4,6 +4,13 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-08-28
+
+### Fixed
+
+- Restored the contrasting folder label color on hover by keeping the inline
+  rename input's ID specificity out of the normal label selector.
+
 ## [1.5.3] - 2026-08-28
 
 ### Fixed
