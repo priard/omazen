@@ -4,22 +4,37 @@
 
 declare -Ag OMAZEN_TOML=()
 
+parse_resolved_omarchy_colors() {
+  local source=$1
+  local resolved key value
+
+  command -v omarchy-theme-color >/dev/null 2>&1 || return 1
+  resolved=$(omarchy-theme-color --file "$source" --all) || return 1
+
+  while IFS=$'\t' read -r key value; do
+    [[ $key =~ ^[A-Za-z0-9_]+$ ]] || continue
+    OMAZEN_TOML["$key"]=$value
+  done <<<"$resolved"
+}
+
 parse_colors_toml() {
   local source=$1
   local line key value
   OMAZEN_TOML=()
 
   [[ -f $source ]] || return 1
-  while IFS= read -r line || [[ -n $line ]]; do
-    line=${line%$'\r'}
-    [[ $line =~ ^[[:space:]]*$ ]] && continue
-    [[ $line =~ ^[[:space:]]*# ]] && continue
-    if [[ $line =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*\"([^\"]*)\"[[:space:]]*(#.*)?$ ]]; then
-      key=${BASH_REMATCH[1]}
-      value=${BASH_REMATCH[2]}
-      OMAZEN_TOML["$key"]=$value
-    fi
-  done <"$source"
+  if ! parse_resolved_omarchy_colors "$source"; then
+    while IFS= read -r line || [[ -n $line ]]; do
+      line=${line%$'\r'}
+      [[ $line =~ ^[[:space:]]*$ ]] && continue
+      [[ $line =~ ^[[:space:]]*# ]] && continue
+      if [[ $line =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*\"([^\"]*)\"[[:space:]]*(#.*)?$ ]]; then
+        key=${BASH_REMATCH[1]}
+        value=${BASH_REMATCH[2]}
+        OMAZEN_TOML["$key"]=$value
+      fi
+    done <"$source"
+  fi
 
   [[ ${OMAZEN_TOML[mode]:-} == dark || ${OMAZEN_TOML[mode]:-} == light ]] || return 1
   for key in accent selection muted background dark_background lighter_background foreground; do

@@ -38,6 +38,12 @@ safety poll covers lost events while the watcher is healthy. If the watcher
 cannot start or exits, every bridge automatically returns to the previous
 250 ms polling behavior.
 
+Palette normalization uses Omarchy 4's `omarchy-theme-color` resolver when it
+is available. This keeps full semantic Quattro themes and legacy repository
+themes that provide only `background`, `foreground`, `accent` and ANSI
+`color0`…`color15` entries consistent with Omarchy's generated application
+configs. The local strict parser remains a compatibility fallback.
+
 Observed latency depends on the installed hooks, active applications, theme
 complexity, and whether an integration performs first-run work. It should not
 be treated as a fixed Omazen performance guarantee.

@@ -14,7 +14,9 @@
   --zen-colors-input-bg: var(--omazen-background-light) !important;
   --zen-colors-hover-bg: var(--omazen-accent) !important;
   --zen-main-browser-background: var(--omazen-background) !important;
+  --zen-main-browser-background-old: var(--omazen-background) !important;
   --zen-main-browser-background-toolbar: var(--omazen-background) !important;
+  --zen-main-browser-background-toolbar-old: var(--omazen-background) !important;
   --zen-themed-toolbar-bg-transparent: var(--omazen-background) !important;
   --zen-navigator-toolbox-background: var(--omazen-background) !important;
   --zen-toolbar-element-bg: color-mix(in srgb, var(--omazen-background-light) 88%, transparent) !important;
@@ -38,7 +40,9 @@
   --arrowpanel-border-color: var(--omazen-border) !important;
   --panel-separator-color: var(--omazen-border) !important;
   --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
-  --zen-big-shadow: 0 1px 3px color-mix(in srgb, var(--omazen-foreground) 8%, transparent) !important;
+  --omazen-content-shadow:
+    0 3px 8px rgb(0 0 0 / 24%);
+  --zen-big-shadow: var(--omazen-content-shadow) !important;
   --input-bgcolor: var(--omazen-background-dark) !important;
   --input-color: var(--omazen-foreground) !important;
   --focus-outline-color: var(--omazen-accent) !important;
@@ -48,6 +52,11 @@
   --omazen-scrollbar-track: var(--omazen-background-dark);
   --omazen-content-radius: calc(var(--zen-native-inner-radius) + 4px);
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-mode="light"] {
+  --omazen-content-shadow:
+    0 3px 8px rgb(0 0 0 / 18%);
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -68,6 +77,16 @@
 
 :root[data-omazen-enabled="true"] #zen-main-app-wrapper {
   background: var(--omazen-background) !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-browser-background::before,
+:root[data-omazen-enabled="true"] #zen-browser-background::after {
+  background: var(--omazen-background) !important;
+  opacity: 1 !important;
+}
+
+:root[data-omazen-enabled="true"] #zen-browser-background .zen-browser-grain {
+  display: none !important;
 }
 
 :root[data-omazen-enabled="true"][zen-compact-mode="true"] {
@@ -269,6 +288,30 @@
   stroke: var(--omazen-accent-foreground) !important;
 }
 
+:root[data-omazen-enabled="true"] #tabs-newtab-button[in-urlbar="true"] {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  stroke: var(--omazen-accent-foreground) !important;
+  box-shadow: none !important;
+}
+
+:root[data-omazen-enabled="true"] #tabs-newtab-button[in-urlbar="true"] :is(
+  label,
+  image,
+  .toolbarbutton-text,
+  .toolbarbutton-icon,
+  .toolbarbutton-badge-stack
+) {
+  background-color: transparent !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+  stroke: var(--omazen-accent-foreground) !important;
+}
+
 :root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover #zen-site-data-icon-button :is(
   image,
   .toolbarbutton-icon
@@ -300,8 +343,8 @@
   .tabbrowser-tab[selected],
   .tabbrowser-tab[multiselected]
 ) {
-  color: var(--omazen-selection-foreground) !important;
-  fill: var(--omazen-selection-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -315,8 +358,8 @@
   label,
   image
 ) {
-  color: var(--omazen-selection-foreground) !important;
-  fill: var(--omazen-selection-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] zen-folder > .tab-group-label-container:hover :is(
@@ -357,8 +400,8 @@
   .tabbrowser-tab[selected] .tab-background,
   .tabbrowser-tab[multiselected] .tab-background
 ) {
-  background: var(--omazen-selection) !important;
-  color: var(--omazen-foreground) !important;
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
   outline-color: var(--omazen-accent) !important;
 }
 
@@ -668,14 +711,9 @@
 
 :root[data-omazen-enabled="true"] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--omazen-border) 35%, var(--omazen-background)) !important;
   border-radius: var(--omazen-content-radius) !important;
   background-color: var(--omazen-background) !important;
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--omazen-foreground) 10%, transparent) !important;
-}
-
-:root[data-omazen-enabled="true"] #zen-tabbox-wrapper {
-  box-shadow: none !important;
+  box-shadow: var(--omazen-content-shadow) !important;
 }
 
 :root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) :is(
@@ -689,9 +727,8 @@
 
 :root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper {
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--omazen-border) 35%, var(--omazen-background)) !important;
   border-radius: var(--omazen-content-radius) !important;
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--omazen-foreground) 10%, transparent) !important;
+  box-shadow: var(--omazen-content-shadow) !important;
   overflow: clip;
 }
 
@@ -723,13 +760,6 @@
   :root[data-omazen-enabled="true"][zen-has-empty-tab="true"] #zen-tabbox-wrapper::after {
     display: none !important;
   }
-}
-
-:root[data-omazen-enabled="true"] #zen-sidebar-splitter,
-:root[data-omazen-enabled="true"] #zen-sidebar-splitter:hover {
-  background: var(--omazen-background) !important;
-  border: none !important;
-  opacity: 1 !important;
 }
 
 :root[data-omazen-enabled="true"] #zen-sidebar-splitter::before {

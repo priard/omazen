@@ -206,6 +206,41 @@ pass "Omarchy 3 is rejected before setup changes"
 
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "palette mode mapping"
 grep -Fq '"background_dark": "#eeeeee"' "$FAKE_STATE/palette.json" || fail "palette background mapping"
+cp "$FAKE_COLORS" "$TEST_ROOT/full-colors.toml"
+cat >"$FAKE_COLORS" <<'EOF'
+accent = "#85b34c"
+active_border_color = "#496c1e"
+foreground = "#22211d"
+background = "#fdf6ee"
+selection_foreground = "#fdf6ee"
+selection_background = "#85b34c"
+color0 = "#7a6550"
+color1 = "#df2b0d"
+color2 = "#29472a"
+color3 = "#8a6c3e"
+color4 = "#5e8e28"
+color5 = "#28473f"
+color6 = "#3d6b52"
+color7 = "#24201d"
+color8 = "#a09080"
+color9 = "#e03c20"
+color10 = "#1b2e1c"
+color11 = "#6b5237"
+color12 = "#496c1e"
+color13 = "#28463c"
+color14 = "#4a6b4d"
+color15 = "#22211d"
+EOF
+run_omazen sync >/dev/null
+grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "legacy theme mode resolution"
+grep -Fq '"background": "#fdf6ee"' "$FAKE_STATE/palette.json" || fail "legacy theme background resolution"
+grep -Fq '"background_dark": "#beb9b3"' "$FAKE_STATE/palette.json" || fail "legacy theme dark surface derivation"
+grep -Fq '"foreground_muted": "#a09080"' "$FAKE_STATE/palette.json" || fail "legacy theme muted color resolution"
+grep -Fq '"selection": "#85b34c"' "$FAKE_STATE/palette.json" || fail "legacy theme selection alias"
+grep -Fq '"border": "#496c1e"' "$FAKE_STATE/palette.json" || fail "legacy theme active border"
+cp "$TEST_ROOT/full-colors.toml" "$FAKE_COLORS"
+run_omazen sync >/dev/null
+pass "Omarchy resolver normalizes legacy repository themes"
 grep -Fq -- '--zen-urlbar-background-base: var(--omazen-background-light)' \
   "$CHROME_CSS" || fail "inactive URL bar background"
 grep -Fq -- '--lwt-toolbar-field-focus: var(--omazen-background-light)' \
@@ -219,8 +254,52 @@ grep -Fq -- 'zen-folder > .tab-group-label-container:hover :is(' \
 if grep -Fq -- 'zen-folder:hover :is(' "$CHROME_CSS"; then
   fail "folder hover must not recolor nested tabs"
 fi
+grep -Fq -- '#tabs-newtab-button[in-urlbar="true"] {' \
+  "$CHROME_CSS" || fail "active New Tab search button palette"
+ACTIVE_NEWTAB_RULE=$(sed -n \
+  '/#tabs-newtab-button\[in-urlbar="true"\] {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-accent) !important;' \
+  <<< "$ACTIVE_NEWTAB_RULE" || fail "active New Tab search button background"
+grep -Fq -- 'color: var(--omazen-accent-foreground) !important;' \
+  <<< "$ACTIVE_NEWTAB_RULE" || fail "active New Tab search button foreground"
+grep -Fq -- '--zen-big-shadow: var(--omazen-content-shadow) !important;' \
+  "$CHROME_CSS" || fail "theme-aware Zen content shadow token"
+grep -Fq -- '[data-omazen-mode="light"] {' \
+  "$CHROME_CSS" || fail "light-mode content shadow"
+grep -Fq -- 'box-shadow: var(--omazen-content-shadow) !important;' \
+  "$CHROME_CSS" || fail "content surface elevation shadow"
+CONTENT_SURFACE_RULE=$(sed -n \
+  '/\.browserSidebarContainer:not(\[is-zen-split="true"\]):not(\.zen-glance-overlay) {/,/^}/p' \
+  "$CHROME_CSS")
+if grep -Eq -- '^[[:space:]]*border:' <<< "$CONTENT_SURFACE_RULE"; then
+  fail "content elevation must not add a flat border"
+fi
+grep -Fq -- '--zen-main-browser-background-old: var(--omazen-background)' \
+  "$CHROME_CSS" || fail "theme transition background override"
+ZEN_BACKGROUND_RULE=$(sed -n \
+  '/#zen-browser-background::before,$/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-background) !important;' \
+  <<< "$ZEN_BACKGROUND_RULE" || fail "themed Zen base background"
+SELECTED_TAB_RULE=$(sed -n \
+  '/\.tabbrowser-tab\[selected\] \.tab-background,/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background: var(--omazen-accent) !important;' \
+  <<< "$SELECTED_TAB_RULE" || fail "selected tab accent background"
+grep -Fq -- 'color: var(--omazen-accent-foreground) !important;' \
+  <<< "$SELECTED_TAB_RULE" || fail "selected tab accent foreground"
+if sed -n '/#zen-tabbox-wrapper {/,/^}/p' "$CHROME_CSS" | \
+  grep -Fq -- 'box-shadow: none'; then
+  fail "content wrapper must not suppress Zen elevation"
+fi
 grep -Fq -- ':not([zen-compact-mode="true"]) #navigator-toolbox' \
   "$CHROME_CSS" || fail "non-compact toolbox palette"
+NONCOMPACT_TOOLBOX_RULE=$(sed -n \
+  '/:not(\[zen-compact-mode="true"\]) #navigator-toolbox {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background-color: var(--omazen-background) !important;' \
+  <<< "$NONCOMPACT_TOOLBOX_RULE" || fail "non-compact toolbox palette"
 grep -Fq -- '[zen-compact-mode="true"] .zen-toolbar-background' \
   "$CHROME_CSS" || fail "compact rounded background palette"
 grep -Fq -- '--zen-navigator-toolbox-background: transparent' \

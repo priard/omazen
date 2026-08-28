@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   contrastRatio,
@@ -78,9 +79,27 @@ function discover(root) {
 
 function parseColors(file) {
   const values = {};
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*"([^"]*)"\s*(?:#.*)?$/);
-    if (match) values[match[1]] = match[2].toLowerCase();
+  let resolved;
+  try {
+    resolved = execFileSync(
+      "omarchy-theme-color",
+      ["--file", file, "--all"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch {
+    resolved = null;
+  }
+
+  if (resolved !== null) {
+    for (const line of resolved.split(/\r?\n/)) {
+      const match = line.match(/^([A-Za-z0-9_]+)\t(.+)$/);
+      if (match) values[match[1]] = match[2].toLowerCase();
+    }
+  } else {
+    for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+      const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*"([^"]*)"\s*(?:#.*)?$/);
+      if (match) values[match[1]] = match[2].toLowerCase();
+    }
   }
   for (const key of REQUIRED_KEYS) {
     if (key === "mode") {
