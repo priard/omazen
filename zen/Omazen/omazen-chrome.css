@@ -59,6 +59,22 @@
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
 }
 
+/* Zen's workspace component assigns its own color from --toolbox-textcolor.
+ * Restored and additional windows can resolve that native token against the
+ * system foreground instead of the active browser palette. Scope the fix to
+ * the vertical-tab workspace so toolbar and page color inheritance stay
+ * untouched. Selected and hovered rows keep their more specific colors below. */
+:root[data-omazen-enabled="true"] #navigator-toolbox zen-workspace {
+  color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container > label,
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container > #tab-label-input {
+  color: var(--omazen-foreground) !important;
+}
+
 /* Zen's native vertical-tab dividers use a fixed 10% light-dark overlay,
  * which disappears on some Omarchy palettes. Keep every sidebar divider on
  * one semantic, theme-aware color, including the Clear/pinned-tabs row. */
@@ -480,7 +496,8 @@
   fill: var(--omazen-accent-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] zen-folder > .tab-group-label-container:hover :is(
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container:hover :is(
   .tab-group-label-container,
   .tab-group-label,
   label,
