@@ -4,6 +4,15 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-08-28
+
+### Fixed
+
+- Themed Zen's in-chrome confirmation dialogs, including workspace deletion,
+  with readable primary buttons and a separated modal backdrop.
+- Themed the sidebar media player and release notification surfaces, including
+  media-control hover contrast, with the active Omarchy palette.
+
 ## [1.5.4] - 2026-08-28
 
 ### Fixed

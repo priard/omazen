@@ -272,6 +272,20 @@ grep -Fq -- '.pinned-tabs-container-separator toolbarbutton:hover' \
   "$CHROME_CSS" || fail "Clear button hover contrast surface"
 grep -Fq -- '--zen-loading-progress-bar-color: var(--omazen-accent)' \
   "$CHROME_CSS" || fail "Zen loading indicator follows the Omarchy accent"
+grep -Fq -- ':root[data-omazen-enabled="true"] dialog {' \
+  "$CHROME_CSS" || fail "Zen chrome dialogs use the Omazen palette"
+grep -A24 -F -- ':root[data-omazen-enabled="true"] dialog::part(dialog-button) {' \
+  "$CHROME_CSS" | grep -Fq -- '--button-text-color-primary: var(--omazen-accent-foreground)' || \
+  fail "Zen chrome dialog primary buttons use a contrasting foreground"
+grep -Fq -- 'dialog::backdrop {' \
+  "$CHROME_CSS" || fail "Zen chrome dialogs separate their backdrop"
+grep -Fq -- 'zen-sidebar-notification' \
+  "$CHROME_CSS" || fail "Zen release notifications use the Omazen palette"
+grep -A8 -F -- '#zen-media-controls-toolbar,' \
+  "$CHROME_CSS" | grep -Fq -- '--zen-sidebar-notification-bg: var(--omazen-background-light)' || \
+  fail "Zen media cards use the Omazen sidebar surface"
+grep -Fq -- '.zen-media-card .toolbarbutton-1:hover {' \
+  "$CHROME_CSS" || fail "Zen media controls retain hover contrast"
 grep -A2 -F -- '#navigator-toolbox zen-workspace {' \
   "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground) !important;' || \
   fail "restored and additional window sidebars use the Omazen foreground"
