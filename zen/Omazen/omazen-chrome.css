@@ -150,6 +150,83 @@
   background: var(--omazen-background) !important;
 }
 
+/* Zen places media cards and release notifications above the sidebar footer.
+ * Both surfaces share these native tokens; defining them on their hosts also
+ * carries the palette through the notification's shadow DOM. */
+:root[data-omazen-enabled="true"] :is(
+  #zen-media-controls-toolbar,
+  zen-sidebar-notification
+) {
+  --zen-primary-color: var(--omazen-accent) !important;
+  --zen-sidebar-notification-bg: var(--omazen-background-light) !important;
+  --zen-sidebar-notification-outline: 1px solid var(--omazen-border) !important;
+  --zen-sidebar-notification-shadow: var(--omazen-content-shadow) !important;
+  color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-media-card {
+  background-color: var(--omazen-background-light) !important;
+  color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-media-card .toolbarbutton-1 {
+  --toolbarbutton-icon-fill: var(--omazen-foreground) !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-media-card .toolbarbutton-1:hover {
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-icon-fill: var(--omazen-accent-foreground) !important;
+  background-color: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .zen-media-progress-bar {
+  accent-color: var(--omazen-accent) !important;
+}
+
+/* Workspace deletion and similar Zen chrome prompts use an HTML dialog with
+ * shadow-DOM buttons rather than the content-process commonDialog. Map both
+ * the host surface and the button tokens without reaching into that shadow
+ * tree. */
+:root[data-omazen-enabled="true"] dialog {
+  background: var(--omazen-background-dark) !important;
+  border: 1px solid var(--omazen-border) !important;
+  box-shadow: var(--omazen-content-shadow) !important;
+  color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] dialog::backdrop {
+  backdrop-filter: blur(3px) !important;
+  background: color-mix(
+    in srgb,
+    var(--omazen-background) 72%,
+    transparent
+  ) !important;
+}
+
+:root[data-omazen-enabled="true"] dialog::part(dialog-button) {
+  --button-background-color: var(--omazen-background-light) !important;
+  --button-background-color-hover: color-mix(
+    in srgb,
+    var(--omazen-background-light) 82%,
+    var(--omazen-accent)
+  ) !important;
+  --button-background-color-active: var(--omazen-selection) !important;
+  --button-background-color-primary: var(--omazen-accent) !important;
+  --button-background-color-primary-hover: color-mix(
+    in srgb,
+    var(--omazen-accent) 82%,
+    var(--omazen-foreground)
+  ) !important;
+  --button-background-color-primary-active: var(--omazen-selection) !important;
+  --button-text-color: var(--omazen-foreground) !important;
+  --button-text-color-primary: var(--omazen-accent-foreground) !important;
+  border-color: var(--omazen-border) !important;
+}
+
 :root[data-omazen-enabled="true"] #zen-browser-background::before,
 :root[data-omazen-enabled="true"] #zen-browser-background::after {
   background: var(--omazen-background) !important;
