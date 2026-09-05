@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name           Omazen privileged palette bridge
 // @description    Applies a validated local Omazen palette to Zen chrome and internal pages.
-// @version        1.5.5
+// @version        1.6.1
 // @author         Omazen contributors
 // @include        main
 // @WindowActor    Omazen
@@ -23,9 +23,9 @@
   const LOG_ARCHIVE_LEAF = "bridge.log.1";
   const STYLE_ID = "omazen-chrome-style";
   const CONTENT_STYLE_ID = "omazen-content-style";
-  const VERSION = "1.5.5";
-  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.5.5.css";
-  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.5.5.css";
+  const VERSION = "1.6.1";
+  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.6.1.css";
+  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.6.1.css";
   const {
     COLOR_KEYS,
     actorPayload,
@@ -164,7 +164,14 @@
 
   function contentPaletteCss(palette) {
     const accentForeground = deriveAccentForeground(palette);
-    const hover = `color-mix(in srgb, ${palette.background_light} 82%, ${palette.accent})`;
+    const raised = `color-mix(in srgb, ${palette.background} 87%, ${palette.foreground})`;
+    const hover = `color-mix(in srgb, ${raised} 82%, ${palette.accent})`;
+    // Panel surfaces follow the canvas plus a foreground mix so legacy
+    // palettes with a genuinely dark background_dark cannot turn in-content
+    // cards into heavy slabs. Mirrors --omazen-surface in the content sheet.
+    const surface = `color-mix(in srgb, ${palette.background} 94%, ${palette.foreground})`;
+    const surfaceBorder = `color-mix(in srgb, ${palette.foreground} 12%, transparent)`;
+    const controlBorder = `color-mix(in srgb, ${palette.foreground} 20%, transparent)`;
     const accentHover = `color-mix(in srgb, ${palette.accent} 82%, ${palette.foreground})`;
     const selectionText = selectionForeground(palette);
     return `
@@ -188,18 +195,19 @@
     --omazen-selection: ${palette.selection} !important;
     --omazen-border: ${palette.border} !important;
     --background-color-canvas: ${palette.background} !important;
-    --background-color-box: ${palette.background_dark} !important;
-    --background-color-box-info: ${palette.background_light} !important;
+    --background-color-box: ${surface} !important;
+    --background-color-box-info: ${surface} !important;
     --background-color-overlay: ${palette.background_dark} !important;
-    --button-background-color: ${palette.background_light} !important;
+    --button-background-color: ${raised} !important;
     --button-background-color-hover: ${hover} !important;
     --button-background-color-active: ${palette.selection} !important;
     --button-background-color-primary: ${palette.accent} !important;
-    --button-background-color-ghost-hover: ${palette.background_light} !important;
+    --button-background-color-ghost-hover: ${raised} !important;
     --button-text-color: ${palette.foreground} !important;
+    --button-text-color-active: ${selectionText} !important;
     --button-text-color-hover: ${palette.foreground} !important;
     --button-text-color-primary: ${accentForeground} !important;
-    --button-text-color-primary-active: ${accentForeground} !important;
+    --button-text-color-primary-active: ${selectionText} !important;
     --button-text-color-primary-hover: ${accentForeground} !important;
     --in-content-primary-button-text-color: ${accentForeground} !important;
     --button-text-color-ghost: var(--omazen-action-text) !important;
@@ -216,19 +224,23 @@
     --box-button-text-color-hover: var(--omazen-action-text) !important;
     --box-button-text-color-active: var(--omazen-action-text) !important;
     --box-button-text-color-disabled: var(--omazen-disabled-text) !important;
-    --border-color: ${palette.border} !important;
+    --border-color: ${controlBorder} !important;
     --border-color-selected: ${palette.accent} !important;
-    --card-background-color: ${palette.background_dark} !important;
-    --card-border-color: ${palette.border} !important;
+    --card-background-color: ${surface} !important;
+    --card-box-shadow: none !important;
+    --card-box-shadow-hover: none !important;
+    --card-border-color: ${surfaceBorder} !important;
     --color-accent-primary: ${palette.accent} !important;
     --color-accent-primary-hover: ${accentHover} !important;
+    --color-accent-primary-active: ${palette.selection} !important;
+    --button-background-color-primary-active: ${palette.selection} !important;
     --link-color: ${palette.accent} !important;
     --link-color-hover: ${accentHover} !important;
     --link-color-active: ${palette.accent} !important;
     --link-color-visited: ${palette.accent} !important;
     --icon-color: ${palette.foreground_muted} !important;
-    --input-text-background-color: ${palette.background_dark} !important;
-    --input-text-border-color: ${palette.border} !important;
+    --input-text-background-color: ${palette.background} !important;
+    --input-text-border-color: ${controlBorder} !important;
     --input-text-color: ${palette.foreground} !important;
     --text-color: ${palette.foreground} !important;
     --text-color-deemphasized: ${palette.foreground_muted} !important;
@@ -239,7 +251,7 @@
     --sidebar-text-color: ${palette.foreground} !important;
     --sidebar-selected-color: ${palette.accent} !important;
     --sidebar-background-hover: ${palette.background_light} !important;
-    --card-separator-color: ${palette.border} !important;
+    --card-separator-color: ${surfaceBorder} !important;
     --theme-body-background: ${palette.background} !important;
     --theme-body-emphasized-background: ${palette.background_light} !important;
     --theme-sidebar-background: ${palette.background_dark} !important;
@@ -250,7 +262,7 @@
     --theme-toolbar-hover: ${palette.background_light} !important;
     --theme-toolbar-separator: ${palette.border} !important;
     --theme-selection-background: ${palette.selection} !important;
-    --theme-selection-color: ${palette.foreground} !important;
+    --theme-selection-color: ${selectionText} !important;
     --theme-splitter-color: ${palette.border} !important;
     --theme-icon-color: ${palette.foreground_muted} !important;
     --theme-icon-checked-color: ${palette.accent} !important;
@@ -281,7 +293,7 @@
   login-list, .app__sidebar, .sidebar, .card, .debug-target-item {
     background-color: ${palette.background_dark} !important;
     color: ${palette.foreground} !important;
-    border-color: ${palette.border} !important;
+    border-color: ${surfaceBorder} !important;
   }
   #print, .header-container, .body-container, .footer-container {
     background-color: ${palette.background} !important;
@@ -291,7 +303,7 @@
   .toggle-group-label {
     background-color: ${palette.background_dark} !important;
     color: ${palette.foreground} !important;
-    border-color: ${palette.border} !important;
+    border-color: ${controlBorder} !important;
   }
   .toggle-group-input:checked + .toggle-group-label {
     background-color: ${palette.accent} !important;
@@ -302,7 +314,7 @@
     accent-color: ${palette.accent} !important;
   }
   #print :is(hr, .twisty, #button-container) {
-    border-color: ${palette.border} !important;
+    border-color: ${surfaceBorder} !important;
   }
   #open-dialog-link {
     color: ${palette.accent} !important;

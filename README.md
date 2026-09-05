@@ -34,14 +34,15 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.5.5` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.6.1` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
 the qualified command and rollback contracts. Canonical stylesheet sources
 remain unversioned in the repository and are installed under release-versioned
 names for `chrome://` cache busting. The shared event-driven watcher, automatic
 polling fallback and external palette-provider compatibility remain intact. The
-current tested environment is Omarchy `4.0.1` (Quattro) with native
-`zen-browser-bin 1.21.15b-1`.
+current tested environment is Omarchy `4.0.2` (Quattro) with native
+`zen-browser-bin 1.22b-1`, based on Zen `1.22b` / Firefox `155.0.1`
+(64-bit).
 
 The historical live qualification and complete test results are recorded in
 the [validation report](docs/validation.md). Compatibility boundaries and
@@ -114,9 +115,9 @@ to the previous 250 ms polling behavior.
 ## Compatibility
 
 The official support scope is **Omarchy Quattro plus the native Arch package
-`zen-browser-bin`** installed at `/opt/zen-browser-bin`. Zen `1.21.15b` is the
-fully validated version; native Zen versions `>=1.20` are compatibility
-candidates and produce a `doctor` warning until tested. Flatpak, Firefox,
+`zen-browser-bin`** installed at `/opt/zen-browser-bin`. Zen `1.22b` and
+`1.21.16b` are the fully validated versions; native Zen versions `>=1.20` are
+compatibility candidates and produce a `doctor` warning until tested. Flatpak, Firefox,
 AppImage, tarball, source-build and other non-native installations are outside
 the supported scope. Omarchy 3 and earlier are rejected because their generated
 theme state uses paths incompatible with Omazen's Quattro palette integration.

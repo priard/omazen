@@ -20,6 +20,23 @@ documented advisory warning groups and reported no critical failure.
 
 ## Current compatibility revalidation
 
+Date: 2026-09-05
+
+Zen advanced to `zen-browser-bin 1.22b-1` (Gecko `155.0.1`, build ID
+`20260904060728`, source stamp
+`c2a638b7f735c7e7d4ee22e0182c8f6a16da93e5`) on Omarchy `4.0.2-1` (Quattro).
+The chrome and content stylesheets were rechecked against this package's
+`browser/omni.ja` and `omni.ja`; the tab audio indicator (`.tab-audio-button`,
+`.tab-icon-overlay`), the `moz-button` icon-fill contract and the menu, panel
+and media-card selectors are unchanged from `1.21.16b`.
+
+The CSS contract suite, release consistency check and palette contrast checker
+pass against this build, with the same seven documented advisory warning
+groups. `omazen doctor` reports zero failures and zero warnings and identifies
+Zen `1.22b` as a fully validated version.
+
+## Previous compatibility revalidation
+
 Date: 2026-08-31
 
 The installed environment is now Omarchy `4.0.2-1` (Quattro) with native
