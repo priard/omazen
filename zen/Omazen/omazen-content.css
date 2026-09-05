@@ -11,30 +11,50 @@
   --omazen-secondary-text: color-mix(in srgb, var(--omazen-foreground-muted) 40%, var(--omazen-foreground));
   --omazen-disabled-text: var(--omazen-foreground-muted);
   --omazen-accent-foreground: var(--omazen-background-dark);
-  --omazen-settings-control-background: var(--omazen-background-dark);
+  --omazen-selection-foreground: var(--omazen-background-dark);
+  /* Panel surfaces are derived from the canvas and the active foreground
+   * rather than from the provider's background-dark. Themes resolved from
+   * legacy palettes may define that shade as a genuinely dark color even in
+   * light mode, which turned Settings cards into heavy slabs. A foreground
+   * mix keeps the same subtle step in every theme and raises cards in dark
+   * mode the way Firefox's own in-content boxes do. */
+  --omazen-surface: color-mix(in srgb, var(--omazen-background) 94%, var(--omazen-foreground));
+  --omazen-surface-inset: var(--omazen-background);
+  --omazen-surface-raised: color-mix(in srgb, var(--omazen-background) 87%, var(--omazen-foreground));
+  --omazen-surface-stripe: color-mix(in srgb, var(--omazen-background) 97%, var(--omazen-foreground));
+  --omazen-surface-border: color-mix(in srgb, var(--omazen-foreground) 12%, transparent);
+  /* Firefox leaves default buttons borderless and draws frames from
+   * currentColor, so mapping every edge to the palette's border color made
+   * Settings look wired together with hard lines. Derive control edges from
+   * the foreground instead: a quiet line for frames, buttons, selects and
+   * inputs, and a firmer one for the small controls that need to stay
+   * findable when unchecked. */
+  --omazen-control-border: color-mix(in srgb, var(--omazen-foreground) 20%, transparent);
+  --omazen-control-border-strong: color-mix(in srgb, var(--omazen-foreground) 30%, transparent);
+  --omazen-settings-control-background: var(--omazen-surface-inset);
   --background-color-canvas: var(--omazen-background) !important;
-  --background-color-box: var(--omazen-background-dark) !important;
-  --background-color-box-info: var(--omazen-background-light) !important;
+  --background-color-box: var(--omazen-surface) !important;
+  --background-color-box-info: var(--omazen-surface) !important;
   --background-color-overlay: var(--omazen-background-dark) !important;
-  --button-background-color: var(--omazen-background-light) !important;
+  --button-background-color: var(--omazen-surface-raised) !important;
   --button-background-color-active: var(--omazen-selection) !important;
-  --button-background-color-hover: color-mix(in srgb, var(--omazen-background-light) 82%, var(--omazen-accent)) !important;
+  --button-background-color-hover: color-mix(in srgb, var(--omazen-surface-raised) 82%, var(--omazen-accent)) !important;
   --button-background-color-primary: var(--omazen-accent) !important;
   --button-background-color-primary-active: var(--omazen-selection) !important;
   --button-background-color-primary-hover: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
-  --button-border-color: var(--omazen-border) !important;
+  --button-border-color: var(--omazen-control-border) !important;
   --button-border-color-active: var(--omazen-accent) !important;
   --button-border-color-hover: var(--omazen-accent) !important;
   --button-border-color-primary: var(--omazen-accent) !important;
   --button-border-color-primary-active: var(--omazen-accent) !important;
   --button-border-color-primary-hover: var(--omazen-accent) !important;
   --button-text-color: var(--omazen-foreground) !important;
-  --button-text-color-active: var(--omazen-foreground) !important;
+  --button-text-color-active: var(--omazen-selection-foreground) !important;
   --button-text-color-hover: var(--omazen-foreground) !important;
   --button-text-color-primary: var(--omazen-accent-foreground) !important;
-  --button-text-color-primary-active: var(--omazen-accent-foreground) !important;
+  --button-text-color-primary-active: var(--omazen-selection-foreground) !important;
   --button-text-color-primary-hover: var(--omazen-accent-foreground) !important;
-  --button-background-color-ghost-hover: var(--omazen-background-light) !important;
+  --button-background-color-ghost-hover: var(--omazen-surface-raised) !important;
   --button-text-color-ghost: var(--omazen-action-text) !important;
   --button-text-color-ghost-hover: var(--omazen-action-text) !important;
   --button-text-color-ghost-active: var(--omazen-action-text) !important;
@@ -49,9 +69,9 @@
   --box-button-text-color-hover: var(--omazen-action-text) !important;
   --box-button-text-color-active: var(--omazen-action-text) !important;
   --box-button-text-color-disabled: var(--omazen-disabled-text) !important;
-  --border-color: var(--omazen-border) !important;
+  --border-color: var(--omazen-control-border) !important;
   --border-color-selected: var(--omazen-accent) !important;
-  --border-color-interactive: var(--omazen-border) !important;
+  --border-color-interactive: var(--omazen-control-border-strong) !important;
   --border-color-interactive-active: var(--omazen-accent) !important;
   --border-color-interactive-hover: var(--omazen-accent) !important;
   --color-accent-primary: var(--omazen-accent) !important;
@@ -63,19 +83,21 @@
   --link-color-active: var(--omazen-accent) !important;
   --link-color-visited: var(--omazen-accent) !important;
   --icon-color: var(--omazen-foreground-muted) !important;
-  --card-background-color: var(--omazen-background-dark) !important;
-  --card-border-color: var(--omazen-border) !important;
+  --card-background-color: var(--omazen-surface) !important;
+  --card-border-color: var(--omazen-surface-border) !important;
+  --card-box-shadow: none !important;
+  --card-box-shadow-hover: none !important;
   --input-text-background-color: var(--omazen-background-dark) !important;
-  --input-text-border-color: var(--omazen-border) !important;
+  --input-text-border-color: var(--omazen-control-border) !important;
   --input-text-color: var(--omazen-foreground) !important;
   --text-color: var(--omazen-foreground) !important;
   --text-color-deemphasized: var(--omazen-foreground-muted) !important;
   --in-content-page-background: var(--omazen-background) !important;
   --in-content-page-color: var(--omazen-foreground) !important;
   --in-content-deemphasized-text: var(--omazen-foreground-muted) !important;
-  --in-content-box-background: var(--omazen-background-dark) !important;
-  --in-content-box-background-odd: var(--omazen-background-light) !important;
-  --in-content-box-border-color: var(--omazen-border) !important;
+  --in-content-box-background: var(--omazen-surface-inset) !important;
+  --in-content-box-background-odd: var(--omazen-surface-stripe) !important;
+  --in-content-box-border-color: var(--omazen-surface-border) !important;
   --in-content-primary-button-background: var(--omazen-accent) !important;
   --in-content-primary-button-text-color: var(--omazen-accent-foreground) !important;
   --in-content-primary-button-background-hover: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
@@ -89,7 +111,7 @@
   --sidebar-text-color: var(--omazen-foreground) !important;
   --sidebar-selected-color: var(--omazen-accent) !important;
   --sidebar-background-hover: var(--omazen-background-light) !important;
-  --card-separator-color: var(--omazen-border) !important;
+  --card-separator-color: var(--omazen-surface-border) !important;
   --theme-body-background: var(--omazen-background) !important;
   --theme-body-emphasized-background: var(--omazen-background-light) !important;
   --theme-body-alternate-emphasized-background: var(--omazen-background-light) !important;
@@ -104,7 +126,7 @@
   --theme-toolbar-separator: var(--omazen-border) !important;
   --theme-selection-background: var(--omazen-selection) !important;
   --theme-selection-focus-background: var(--omazen-selection) !important;
-  --theme-selection-color: var(--omazen-foreground) !important;
+  --theme-selection-color: var(--omazen-selection-foreground) !important;
   --theme-text-selection-background: var(--omazen-selection) !important;
   --theme-splitter-color: var(--omazen-border) !important;
   --theme-emphasized-splitter-color: var(--omazen-accent) !important;
@@ -128,18 +150,6 @@
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
   background: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
-}
-
-/* Complete Quattro light palettes keep background-dark close to the canvas,
- * while legacy themes resolved by Omarchy may produce a much heavier surface.
- * Soften only Settings controls in light mode; dark themes retain their
- * provider-defined background-dark and browser chrome remains untouched. */
-:root[data-omazen-enabled="true"][data-omazen-mode="light"] {
-  --omazen-settings-control-background: color-mix(
-    in srgb,
-    var(--omazen-background-dark) 32%,
-    var(--omazen-background)
-  );
 }
 
 :root[data-omazen-enabled="true"] body {
@@ -205,23 +215,32 @@
 }
 
 :root[data-omazen-enabled="true"]:has(#commonDialog) {
-  background-color: var(--omazen-background-dark) !important;
+  background-color: transparent !important;
   color: var(--omazen-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] #commonDialog {
   --text-color-deemphasized: var(--omazen-foreground-muted) !important;
-  background-color: var(--omazen-background-dark) !important;
+  background-color: transparent !important;
   color: var(--omazen-foreground) !important;
 }
 
+/* The surrounding `.dialogBox` in chrome carries the themed panel, so the
+ * prompt document stays flush and transparent instead of stacking a second
+ * card with its own border and shadow inside that panel. */
 :root[data-omazen-enabled="true"] #commonDialog::part(content-box) {
-  background-color: var(--omazen-background-dark) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   color: var(--omazen-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] #commonDialog::part(dialog-button) {
-  background-color: var(--omazen-background-light) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background) 58%,
+    var(--omazen-background-light)
+  ) !important;
   color: var(--omazen-foreground) !important;
   border-color: var(--omazen-border) !important;
 }
@@ -272,7 +291,7 @@
 ) {
   background-color: var(--omazen-settings-control-background) !important;
   color: var(--omazen-foreground) !important;
-  border-color: var(--omazen-border) !important;
+  border-color: var(--omazen-control-border) !important;
 }
 
 :root[data-omazen-enabled="true"] input:is([type="radio"], [type="checkbox"]) {
@@ -287,7 +306,7 @@
   --checkbox-background-color-checked: var(--omazen-accent) !important;
   --checkbox-background-color-checked-active: var(--omazen-selection) !important;
   --checkbox-background-color-checked-hover: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
-  --checkbox-border-color: var(--omazen-border) !important;
+  --checkbox-border-color: var(--omazen-control-border-strong) !important;
   --checkbox-border-color-checked: var(--omazen-accent) !important;
   color: var(--omazen-foreground) !important;
 }
@@ -295,11 +314,11 @@
 :root[data-omazen-enabled="true"] moz-toggle {
   --toggle-background-color: var(--omazen-settings-control-background) !important;
   --toggle-background-color-active: var(--omazen-selection) !important;
-  --toggle-background-color-hover: var(--omazen-background-light) !important;
+  --toggle-background-color-hover: var(--omazen-surface-raised) !important;
   --toggle-background-color-pressed: var(--omazen-accent) !important;
   --toggle-background-color-pressed-active: var(--omazen-selection) !important;
   --toggle-background-color-pressed-hover: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
-  --toggle-border-color: var(--omazen-border) !important;
+  --toggle-border-color: var(--omazen-control-border-strong) !important;
   --toggle-dot-background-color: var(--omazen-foreground-muted) !important;
   --toggle-dot-background-color-on-pressed: var(--omazen-background-dark) !important;
   color: var(--omazen-foreground) !important;
@@ -307,8 +326,8 @@
 
 :root[data-omazen-enabled="true"] moz-select {
   --select-background-color: var(--omazen-settings-control-background) !important;
-  --select-background-color-hover: var(--omazen-background-light) !important;
-  --select-border: 1px solid var(--omazen-border) !important;
+  --select-background-color-hover: var(--omazen-surface-raised) !important;
+  --select-border: 1px solid var(--omazen-control-border) !important;
   --select-border-color-hover: var(--omazen-accent) !important;
   --select-icon-fill: var(--omazen-foreground-muted) !important;
   --select-option-text-color: var(--omazen-foreground) !important;
@@ -328,7 +347,7 @@
 
 :root[data-omazen-enabled="true"] #searchInput {
   --input-text-background-color: var(--omazen-settings-control-background);
-  --input-text-border-color: var(--omazen-border);
+  --input-text-border-color: var(--omazen-control-border);
   --input-text-color: var(--omazen-foreground);
   --icon-color: var(--omazen-foreground-muted);
 }
@@ -362,6 +381,7 @@
 
 :root[data-omazen-enabled="true"] #zenCKSResetButton:hover:active {
   background-color: var(--omazen-selection) !important;
+  color: var(--omazen-selection-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] #zenCKSOption-wrapper > [data-group] {
@@ -450,6 +470,7 @@
 
 :root[data-omazen-enabled="true"] #zenMarketplaceGroup button:hover:active {
   background-color: var(--omazen-selection) !important;
+  color: var(--omazen-selection-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] .zenThemeMarketplaceItem {
@@ -528,5 +549,5 @@
 
 :root[data-omazen-enabled="true"] ::selection {
   background-color: var(--omazen-selection) !important;
-  color: var(--omazen-foreground) !important;
+  color: var(--omazen-selection-foreground) !important;
 }
