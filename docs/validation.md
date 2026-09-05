@@ -18,6 +18,39 @@ rendered-pixel coverage and the real Zen integration sequence for dark/light
 palettes plus live disable/enable. The contrast checker retained its seven
 documented advisory warning groups and reported no critical failure.
 
+## Current compatibility revalidation
+
+Date: 2026-09-05
+
+Zen advanced to `zen-browser-bin 1.22b-1` (Gecko `155.0.1`, build ID
+`20260904060728`, source stamp
+`c2a638b7f735c7e7d4ee22e0182c8f6a16da93e5`) on Omarchy `4.0.2-1` (Quattro).
+The chrome and content stylesheets were rechecked against this package's
+`browser/omni.ja` and `omni.ja`; the tab audio indicator (`.tab-audio-button`,
+`.tab-icon-overlay`), the `moz-button` icon-fill contract and the menu, panel
+and media-card selectors are unchanged from `1.21.16b`.
+
+The CSS contract suite, release consistency check and palette contrast checker
+pass against this build, with the same seven documented advisory warning
+groups. `omazen doctor` reports zero failures and zero warnings and identifies
+Zen `1.22b` as a fully validated version.
+
+## Previous compatibility revalidation
+
+Date: 2026-08-31
+
+The installed environment is now Omarchy `4.0.2-1` (Quattro) with native
+`zen-browser-bin 1.21.16b-1`. Zen reports build ID `20260828113729`, source
+stamp `f4d9821fd777663660b099127b4f2d8399c7fd2c`, and Gecko `154.0.1`.
+
+The Rust build, unit tests, disposable lifecycle suite, read-only and release
+consistency checks, palette contrast checks, and rendered-pixel smoke test all
+pass against this installed Zen version. `omazen doctor` reports zero failures
+and zero warnings and now identifies Zen `1.21.16b` as the fully validated
+version. The compositor-backed visual integration suite could not complete on
+this session because `hyprctl` did not return parseable JSON; that is an
+environment limitation, not a reported Zen styling failure.
+
 The local deployment gate updated the installed `1.4.1` release on Omarchy
 `4.0.1-1` with `zen-browser-bin 1.21.15b-1`. Setup upgraded both detected
 profiles, removed their owned `v1.4.1` stylesheet copies, installed the

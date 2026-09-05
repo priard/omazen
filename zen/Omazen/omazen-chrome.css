@@ -11,6 +11,7 @@
   --zen-colors-border: var(--omazen-border) !important;
   --zen-colors-border-contrast: var(--omazen-accent) !important;
   --omazen-accent-foreground: var(--omazen-background-dark);
+  --omazen-selection-foreground: var(--omazen-background-dark);
   --zen-colors-input-bg: var(--omazen-background-light) !important;
   --zen-colors-hover-bg: var(--omazen-accent) !important;
   --zen-main-browser-background: var(--omazen-background) !important;
@@ -35,10 +36,27 @@
   --lwt-toolbar-field-color: var(--omazen-foreground) !important;
   --lwt-toolbar-field-border-color: var(--omazen-border) !important;
   --lwt-toolbar-field-focus: var(--omazen-background-light) !important;
+  --lwt-toolbar-field-highlight: var(--omazen-accent) !important;
+  --lwt-toolbar-field-highlight-text: var(--omazen-accent-foreground) !important;
+  /* Chrome popups, the media card and panel separators all drew their edges
+   * from the raw palette border. Omarchy themes may place that color far from
+   * their own surfaces, and Zen's own design asks for a 10% overlay here, so
+   * at full strength every floating surface got a hard grey frame. Derive the
+   * edges from the active foreground instead, reusing the in-content sheet's
+   * vocabulary: a hairline for lines drawn on a known surface and a firmer
+   * one for frames that float over unpredictable content. */
+  --omazen-surface-border: color-mix(in srgb, var(--omazen-foreground) 12%, transparent);
+  --omazen-control-border: color-mix(in srgb, var(--omazen-foreground) 20%, transparent);
+  /* Zen collapses every panel row's hover onto `currentColor 5%`, a neutral
+   * wash that ignores the palette and is nearly invisible on dark themes.
+   * Tint the app menu's rows with the accent instead, keeping the label on
+   * the palette foreground rather than filling the row like a context menu. */
+  --omazen-panel-item-hover: color-mix(in srgb, var(--omazen-background) 86%, var(--omazen-accent));
+  --omazen-panel-item-active: color-mix(in srgb, var(--omazen-background) 74%, var(--omazen-accent));
   --arrowpanel-background: var(--omazen-background-dark) !important;
   --arrowpanel-color: var(--omazen-foreground) !important;
-  --arrowpanel-border-color: var(--omazen-border) !important;
-  --panel-separator-color: var(--omazen-border) !important;
+  --arrowpanel-border-color: var(--omazen-control-border) !important;
+  --panel-separator-color: var(--omazen-surface-border) !important;
   --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
   --omazen-content-shadow:
     0 3px 8px rgb(0 0 0 / 24%);
@@ -47,7 +65,7 @@
   --input-color: var(--omazen-foreground) !important;
   --focus-outline-color: var(--omazen-accent) !important;
   --tab-selected-bgcolor: var(--omazen-selection) !important;
-  --tab-selected-textcolor: var(--omazen-foreground) !important;
+  --tab-selected-textcolor: var(--omazen-selection-foreground) !important;
   --omazen-scrollbar-thumb: var(--omazen-foreground-muted);
   --omazen-scrollbar-track: var(--omazen-background-dark);
   --omazen-sidebar-separator: color-mix(
@@ -158,14 +176,21 @@
   zen-sidebar-notification
 ) {
   --zen-primary-color: var(--omazen-accent) !important;
-  --zen-sidebar-notification-bg: var(--omazen-background-light) !important;
-  --zen-sidebar-notification-outline: 1px solid var(--omazen-border) !important;
+  /* Zen outlines these cards with a 10% overlay and lets the fill separate
+   * them from the sidebar. Mapping the outline to the full palette border
+   * turned that into a hard frame, and on palettes whose background-light
+   * equals the background the fill did no work at all. Lift the surface the
+   * way the URL bar is lifted and keep the outline near Zen's own weight.
+   * The token also feeds the scrolling-title mask, so the card reads it back
+   * instead of repeating the mix. */
+  --zen-sidebar-notification-bg: color-mix(in srgb, var(--omazen-background-light) 92%, var(--omazen-foreground)) !important;
+  --zen-sidebar-notification-outline: 1px solid var(--omazen-surface-border) !important;
   --zen-sidebar-notification-shadow: var(--omazen-content-shadow) !important;
   color: var(--omazen-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] .zen-media-card {
-  background-color: var(--omazen-background-light) !important;
+  background-color: var(--zen-sidebar-notification-bg) !important;
   color: var(--omazen-foreground) !important;
 }
 
@@ -223,8 +248,54 @@
   ) !important;
   --button-background-color-primary-active: var(--omazen-selection) !important;
   --button-text-color: var(--omazen-foreground) !important;
+  --button-text-color-active: var(--omazen-selection-foreground) !important;
   --button-text-color-primary: var(--omazen-accent-foreground) !important;
+  --button-text-color-primary-active: var(--omazen-selection-foreground) !important;
   border-color: var(--omazen-border) !important;
+}
+
+/* Common dialogs, including Zen's quit prompt, render inside a SubDialog:
+ * a chrome `.dialogBox` that hosts a `.dialogFrame` browser with the prompt
+ * document. The document stays transparent so its rectangle cannot escape the
+ * rounded box, which leaves `.dialogBox` as the only surface able to carry the
+ * palette. Painting it here keeps window-modal and tab-modal prompts on one
+ * themed panel instead of a native slab with a separate card inside. */
+:root[data-omazen-enabled="true"] #window-modal-dialog {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+:root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) {
+  background-color: var(--omazen-background-dark) !important;
+  color: var(--omazen-foreground) !important;
+  border-radius: var(--border-radius-medium) !important;
+  outline: 1px solid var(--omazen-border) !important;
+  outline-offset: -1px !important;
+  box-shadow: var(--omazen-content-shadow) !important;
+}
+
+:root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) > .dialogFrame {
+  background-color: transparent !important;
+  border-radius: var(--border-radius-medium) !important;
+}
+
+/* Tab-modal prompts dim the page rather than the window, so keep this wash
+ * light enough to read through while still following the palette. */
+:root[data-omazen-enabled="true"] .dialogOverlay[topmost="true"] {
+  backdrop-filter: blur(3px) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background) 40%,
+    transparent
+  ) !important;
+}
+
+/* Zen keeps the window-modal overlay transparent because the dialog backdrop
+ * already dims the window. Keep that split so the dim is not applied twice. */
+:root[data-omazen-enabled="true"] #window-modal-dialog > .dialogOverlay[topmost="true"] {
+  backdrop-filter: none !important;
+  background-color: transparent !important;
 }
 
 :root[data-omazen-enabled="true"] #zen-browser-background::before,
@@ -308,13 +379,64 @@
   --zen-toolbar-element-bg: var(--omazen-background-light) !important;
   --zen-urlbar-background-base: var(--omazen-background-light) !important;
   --zen-urlbar-background-transparent: var(--omazen-background-light) !important;
-  background-color: var(--omazen-background-light) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background-light) 92%,
+    var(--omazen-foreground)
+  ) !important;
   color: var(--omazen-foreground) !important;
-  border-color: var(--omazen-border) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 :root[data-omazen-enabled="true"] #urlbar:is([focused="true"], [breakout-extend]) .urlbar-background {
   outline: 1px solid var(--omazen-accent) !important;
+}
+
+/* Firefox gives URL-bar selections dedicated LWT colors that are more
+ * specific than a generic ::selection rule. Keep the selection on the active
+ * accent and pair it with the contrast color derived by the palette bridge. */
+:root[data-omazen-enabled="true"] .urlbar-input::selection {
+  background-color: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+}
+
+/* Essentials may use a favicon-derived glow for the selected tile. Preserve
+ * that identity color while giving every tile a palette-aware surface and
+ * state outline that remains visible in both light and dark themes. */
+:root[data-omazen-enabled="true"] .tabbrowser-tab[zen-essential="true"] .tab-background {
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background-light) 94%,
+    var(--omazen-foreground)
+  ) !important;
+  outline: none !important;
+}
+
+:root[data-omazen-enabled="true"] .tabbrowser-tab[zen-essential="true"]:hover .tab-background {
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background-light) 84%,
+    var(--omazen-accent)
+  ) !important;
+}
+
+:root[data-omazen-enabled="true"] .tabbrowser-tab[zen-essential="true"][visuallyselected] .tab-background {
+  background-color: transparent !important;
+  --zen-essential-tab-selected-bg: color-mix(
+    in srgb,
+    var(--omazen-background-light) 78%,
+    transparent
+  ) !important;
+  --zen-essential-tab-selected-bg-hover: color-mix(
+    in srgb,
+    color-mix(
+      in srgb,
+      var(--omazen-background-light) 74%,
+      var(--omazen-accent)
+    ) 84%,
+    transparent
+  ) !important;
 }
 
 :root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-background {
@@ -617,6 +739,65 @@
   outline-color: var(--omazen-accent) !important;
 }
 
+/* The "this tab is playing audio" speaker is a `moz-button type="icon ghost"`,
+ * so its glyph lives in a shadow tree and is painted by `--button-icon-fill`
+ * rather than by the tab's own `color`/`fill`. Zen resolves the ghost tokens
+ * against the toolbar text color, which never looks at the tab surface: on a
+ * selected tab the speaker stayed light while the tab behind it is the bright
+ * accent, so the indicator all but disappeared. Feed the fill the same
+ * contrast-derived foregrounds the tab label already uses. */
+:root[data-omazen-enabled="true"] .tabbrowser-tab .tab-audio-button {
+  --button-icon-fill: var(--omazen-foreground) !important;
+  --button-text-color-ghost: var(--omazen-foreground) !important;
+  --button-text-color-ghost-hover: var(--omazen-foreground) !important;
+  --button-text-color-ghost-active: var(--omazen-foreground) !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .tabbrowser-tab:is(
+  :hover,
+  [selected],
+  [multiselected]
+) .tab-audio-button {
+  --button-icon-fill: var(--omazen-accent-foreground) !important;
+  --button-text-color-ghost: var(--omazen-accent-foreground) !important;
+  --button-text-color-ghost-hover: var(--omazen-accent-foreground) !important;
+  --button-text-color-ghost-active: var(--omazen-accent-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+}
+
+/* Pinned, essential and collapsed tabs badge the favicon with
+ * `.tab-icon-overlay` instead of the button. Firefox builds that badge's disc
+ * from a stack of `image()` layers and fills the glyph with
+ * `--tab-selected-textcolor`, so both halves come from Firefox's tab tokens
+ * and neither follows the palette. Flatten the stack onto a palette surface
+ * and take the glyph from the foreground derived for that surface. */
+:root[data-omazen-enabled="true"] .tabbrowser-tab .tab-icon-overlay:is(
+  [soundplaying],
+  [muted],
+  [activemedia-blocked]
+) {
+  background-color: var(--omazen-background) !important;
+  background-image: none !important;
+  color: var(--omazen-foreground) !important;
+  fill: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .tabbrowser-tab:is(
+  [selected],
+  [multiselected]
+):not([zen-essential="true"]) .tab-icon-overlay:is(
+  [soundplaying],
+  [muted],
+  [activemedia-blocked]
+) {
+  background-color: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+}
+
 :root[data-omazen-enabled="true"] :is(
   panelmultiview,
   .panel-arrowcontent,
@@ -629,7 +810,7 @@
   --panel-box-shadow: 0 2px 8px color-mix(in srgb, var(--omazen-foreground) 16%, transparent) !important;
   background-color: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
-  border-color: var(--omazen-border) !important;
+  border-color: var(--omazen-control-border) !important;
 }
 
 /* Keep popup-window shadow margins transparent. The visible surface lives in
@@ -646,7 +827,7 @@
 :root[data-omazen-enabled="true"] :is(menupopup, panel)::part(content) {
   background: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
-  border-color: var(--omazen-border) !important;
+  border-color: var(--omazen-control-border) !important;
   box-shadow: var(--panel-box-shadow) !important;
 }
 
@@ -661,6 +842,19 @@
   background: var(--omazen-background) !important;
 }
 
+/* The app menu and the other arrow panels are toolbarbuttons, not menuitems,
+ * so the context-menu selection rule never reaches them. They fall back to
+ * Zen's neutral `currentColor 5%` hover, which reads as a grey smudge instead
+ * of theme feedback. Route the button tokens the panel rows derive from --
+ * ghost, menu and banner hovers all resolve through these two -- to an accent
+ * tint of the panel surface. */
+:root[data-omazen-enabled="true"] :is(menupopup, panel) {
+  --button-background-color-hover: var(--omazen-panel-item-hover) !important;
+  --button-background-color-active: var(--omazen-panel-item-active) !important;
+  --panel-item-hover-bgcolor: var(--omazen-panel-item-hover) !important;
+  --panel-item-active-bgcolor: var(--omazen-panel-item-active) !important;
+}
+
 /* Linux gives XUL tooltips a native GTK surface and an environment-provided
  * radius. Mixing that surface with theme colors leaves bright corner wedges.
  * Paint the complete tooltip ourselves so its fill, edge and radius agree. */
@@ -670,16 +864,28 @@
   -moz-default-appearance: none !important;
   background: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
-  border: 1px solid var(--omazen-border) !important;
+  border: 1px solid var(--omazen-control-border) !important;
   border-radius: 8px !important;
   box-shadow: var(--panel-box-shadow) !important;
 }
 
 /* XUL menuitems use native system colors for the active row unless the
- * internal _moz-menuactive state is themed explicitly. */
+ * internal _moz-menuactive state is themed explicitly. Firefox pairs
+ * -moz-menuhover with -moz-menuhovertext; painting only the background left
+ * the row's label on the palette foreground, which vanishes whenever a theme
+ * picks a bright selection color. Use the contrast-derived selection text
+ * instead, the same way accent surfaces use --omazen-accent-foreground.
+ * The label, the accel text and the submenu arrow all follow currentColor. */
 :root[data-omazen-enabled="true"] :is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled]) {
   background-color: var(--omazen-selection) !important;
-  color: var(--omazen-foreground) !important;
+  color: var(--omazen-selection-foreground) !important;
+}
+
+/* Hovering a disabled row still sets _moz-menuactive, and Firefox fills it
+ * with the system -moz-menuhoverdisabled. Keep that feedback on the palette. */
+:root[data-omazen-enabled="true"] :is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive][disabled] {
+  background-color: color-mix(in srgb, var(--omazen-foreground) 8%, transparent) !important;
+  color: var(--omazen-foreground-muted) !important;
 }
 
 :root[data-omazen-enabled="true"] :is(
@@ -840,7 +1046,7 @@
 }
 
 :root#places[data-omazen-enabled="true"] treechildren::-moz-tree-cell-text(selected) {
-  color: var(--omazen-foreground) !important;
+  color: var(--omazen-selection-foreground) !important;
 }
 
 :root#places[data-omazen-enabled="true"] treechildren::-moz-tree-row(selected) {
@@ -877,7 +1083,7 @@
 
 :root#places[data-omazen-enabled="true"] #downloadsListBox > richlistitem[selected] {
   background-color: var(--omazen-selection) !important;
-  color: var(--omazen-foreground) !important;
+  color: var(--omazen-selection-foreground) !important;
   outline-color: var(--omazen-accent) !important;
 }
 
@@ -908,6 +1114,7 @@
   button
 ):hover:active {
   background-color: var(--omazen-selection) !important;
+  color: var(--omazen-selection-foreground) !important;
 }
 
 :root[data-omazen-enabled="true"] notification-message .notification-button.primary {
@@ -1062,7 +1269,7 @@
 
 :root[data-omazen-enabled="true"] ::selection {
   background-color: var(--omazen-selection) !important;
-  color: var(--omazen-foreground) !important;
+  color: var(--omazen-selection-foreground) !important;
 }
 
 /* The generic toolbar hover treatment is intentionally broad for future

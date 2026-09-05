@@ -246,6 +246,21 @@ grep -Fq -- '--zen-urlbar-background-base: var(--omazen-background-light)' \
   "$CHROME_CSS" || fail "inactive URL bar background"
 grep -Fq -- '--lwt-toolbar-field-focus: var(--omazen-background-light)' \
   "$CHROME_CSS" || fail "focused URL bar background"
+grep -Fq -- '--lwt-toolbar-field-highlight-text: var(--omazen-accent-foreground)' \
+  "$CHROME_CSS" || fail "URL bar selection uses a contrasting foreground"
+grep -A6 -F -- ':root[data-omazen-enabled="true"] .urlbar-background {' \
+  "$CHROME_CSS" | grep -Fq -- 'var(--omazen-background-light) 92%' || \
+  fail "URL bar surface keeps a theme-aware tint"
+grep -A3 -F -- '.urlbar-input::selection {' \
+  "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-accent)' || \
+  fail "URL bar selection follows the Omarchy accent"
+grep -A8 -F -- '.tabbrowser-tab[zen-essential="true"] .tab-background {' \
+  "$CHROME_CSS" | grep -Fq -- 'var(--omazen-background-light) 94%' || \
+  fail "Zen Essentials have a separated theme-aware surface"
+grep -Fq -- '.tabbrowser-tab[zen-essential="true"]:hover .tab-background {' \
+  "$CHROME_CSS" || fail "Zen Essentials expose a distinct hover state"
+grep -Fq -- '--zen-essential-tab-selected-bg-hover: color-mix(' \
+  "$CHROME_CSS" || fail "selected Essentials retain favicon glow under a themed overlay"
 grep -Fq -- '--zen-urlbar-background-transparent: var(--omazen-background-light)' \
   "$CHROME_CSS" || fail "expanded URL bar background"
 grep -Fq -- '#urlbar:is([focused="true"], [breakout-extend]) .urlbar-background' \
@@ -281,9 +296,17 @@ grep -Fq -- 'dialog::backdrop {' \
   "$CHROME_CSS" || fail "Zen chrome dialogs separate their backdrop"
 grep -Fq -- 'zen-sidebar-notification' \
   "$CHROME_CSS" || fail "Zen release notifications use the Omazen palette"
-grep -A8 -F -- '#zen-media-controls-toolbar,' \
-  "$CHROME_CSS" | grep -Fq -- '--zen-sidebar-notification-bg: var(--omazen-background-light)' || \
-  fail "Zen media cards use the Omazen sidebar surface"
+grep -A16 -F -- '#zen-media-controls-toolbar,' \
+  "$CHROME_CSS" | \
+  grep -Fq -- '--zen-sidebar-notification-bg: color-mix(in srgb, var(--omazen-background-light) 92%, var(--omazen-foreground))' || \
+  fail "Zen media cards lift their surface off the sidebar"
+grep -A16 -F -- '#zen-media-controls-toolbar,' \
+  "$CHROME_CSS" | \
+  grep -Fq -- '--zen-sidebar-notification-outline: 1px solid var(--omazen-surface-border)' || \
+  fail "Zen media cards keep a hairline outline instead of the palette border"
+grep -A3 -F -- ':root[data-omazen-enabled="true"] .zen-media-card {' \
+  "$CHROME_CSS" | grep -Fq -- 'background-color: var(--zen-sidebar-notification-bg)' || \
+  fail "Zen media card fill and its title mask share one surface"
 grep -Fq -- '.zen-media-card .toolbarbutton-1:hover {' \
   "$CHROME_CSS" || fail "Zen media controls retain hover contrast"
 grep -A2 -F -- '#navigator-toolbox zen-workspace {' \
@@ -297,6 +320,25 @@ fi
 grep -A8 -F -- ':is(menupopup, panel) {' \
   "$CHROME_CSS" | grep -Fq -- '--panel-background: var(--omazen-background)' || \
   fail "browser panels match the sidebar surface"
+for token in \
+  '--omazen-surface-border: color-mix(in srgb, var(--omazen-foreground) 12%, transparent)' \
+  '--omazen-control-border: color-mix(in srgb, var(--omazen-foreground) 20%, transparent)' \
+  '--arrowpanel-border-color: var(--omazen-control-border)' \
+  '--panel-separator-color: var(--omazen-surface-border)' \
+  '--omazen-panel-item-hover: color-mix(in srgb, var(--omazen-background) 86%, var(--omazen-accent))' \
+  '--omazen-panel-item-active: color-mix(in srgb, var(--omazen-background) 74%, var(--omazen-accent))'; do
+  grep -Fq -- "$token" "$CHROME_CSS" || fail "chrome popup edge token: $token"
+done
+grep -A5 -F -- ':is(menupopup, panel)::part(content) {' \
+  "$CHROME_CSS" | grep -Fq -- 'border-color: var(--omazen-control-border)' || \
+  fail "popup frames use the softened chrome edge"
+grep -A5 -F -- '--button-background-color-hover: var(--omazen-panel-item-hover)' \
+  "$CHROME_CSS" | grep -Fq -- '--button-background-color-active: var(--omazen-panel-item-active)' || \
+  fail "app menu rows take hover and active feedback from the palette"
+if grep -A6 -F -- ':root[data-omazen-enabled="true"] tooltip,' "$CHROME_CSS" | \
+  grep -Fq -- 'border: 1px solid var(--omazen-border)'; then
+  fail "tooltips must not keep the full-strength palette border"
+fi
 grep -A8 -F -- '.pinned-tabs-container-separator toolbarbutton:hover :is(' \
   "$CHROME_CSS" | grep -Fq -- 'fill: var(--omazen-accent)' || \
   fail "Clear arrow and label share the accent hover state"
@@ -350,6 +392,30 @@ grep -Fq -- 'background: var(--omazen-accent) !important;' \
   <<< "$SELECTED_TAB_RULE" || fail "selected tab accent background"
 grep -Fq -- 'color: var(--omazen-accent-foreground) !important;' \
   <<< "$SELECTED_TAB_RULE" || fail "selected tab accent foreground"
+AUDIO_BUTTON_RULE=$(sed -n \
+  '/\.tabbrowser-tab \.tab-audio-button {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- '--button-icon-fill: var(--omazen-foreground) !important;' \
+  <<< "$AUDIO_BUTTON_RULE" || fail "tab audio glyph on the palette foreground"
+grep -Fq -- '--button-text-color-ghost: var(--omazen-foreground) !important;' \
+  <<< "$AUDIO_BUTTON_RULE" || fail "tab audio ghost token on the palette foreground"
+AUDIO_BUTTON_SELECTED_RULE=$(sed -n \
+  '/\[multiselected\]$/,/^}/p' \
+  "$CHROME_CSS" | sed -n '/\.tab-audio-button {/,/^}/p')
+grep -Fq -- '--button-icon-fill: var(--omazen-accent-foreground) !important;' \
+  <<< "$AUDIO_BUTTON_SELECTED_RULE" || \
+  fail "tab audio glyph derives contrast from the accent tab surface"
+grep -Fq -- '.tab-icon-overlay:is(' "$CHROME_CSS" || \
+  fail "pinned tab audio badge is themed"
+AUDIO_OVERLAY_RULE=$(sed -n \
+  '/\.tabbrowser-tab \.tab-icon-overlay:is(/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background-image: none !important;' \
+  <<< "$AUDIO_OVERLAY_RULE" || \
+  fail "pinned tab audio badge drops the Firefox image() stack"
+grep -Fq -- 'fill: var(--omazen-foreground) !important;' \
+  <<< "$AUDIO_OVERLAY_RULE" || \
+  fail "pinned tab audio badge glyph on the palette foreground"
 if sed -n '/#zen-tabbox-wrapper {/,/^}/p' "$CHROME_CSS" | \
   grep -Fq -- 'box-shadow: none'; then
   fail "content wrapper must not suppress Zen elevation"
@@ -402,8 +468,27 @@ grep -A3 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([
   "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-selection)' || \
   fail "context menu hover background palette"
 grep -A4 -F -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive]:not([disabled])' \
-  "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-foreground)' || \
-  fail "context menu hover text palette"
+  "$CHROME_CSS" | grep -Fq -- 'color: var(--omazen-selection-foreground)' || \
+  fail "context menu hover text uses the contrast-derived selection foreground"
+grep -Fq -- ':is(menupopup, panel) :is(menu, menuitem)[_moz-menuactive][disabled]' \
+  "$CHROME_CSS" || fail "disabled context menu rows keep the palette on hover"
+for sheet in "$CHROME_CSS" "$CONTENT_CSS"; do
+  grep -Fq -- '--omazen-selection-foreground: var(--omazen-background-dark);' "$sheet" || \
+    fail "selection foreground needs a stylesheet-level fallback"
+  grep -A3 -F -- ':root[data-omazen-enabled="true"] ::selection {' "$sheet" | \
+    grep -Fq -- 'color: var(--omazen-selection-foreground)' || \
+    fail "text selection uses the contrast-derived selection foreground"
+done
+grep -Fq -- '--button-text-color-active: var(--omazen-selection-foreground)' \
+  "$CONTENT_CSS" || fail "active buttons pair selection background with selection text"
+grep -Fq -- '--button-text-color-primary-active: var(--omazen-selection-foreground)' \
+  "$CONTENT_CSS" || fail "active primary buttons pair selection background with selection text"
+grep -Fq -- '--theme-selection-color: var(--omazen-selection-foreground)' \
+  "$CONTENT_CSS" || fail "devtools selection text follows the derived foreground"
+grep -Fq -- '--button-text-color-active: ${selectionText}' \
+  "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "bridge active buttons carry the derived selection text"
+grep -Fq -- '--theme-selection-color: ${selectionText}' \
+  "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "bridge devtools selection text follows the derived foreground"
 grep -A2 -F -- ':root[data-omazen-enabled="true"] menupopup::part(content) {' \
   "$CHROME_CSS" | grep -Fq -- 'background: var(--omazen-background)' || \
   fail "context menus match the sidebar surface"
@@ -416,8 +501,10 @@ grep -Fq -- '--background-color-canvas: var(--omazen-background)' \
   "$CONTENT_CSS" || fail "Settings canvas palette"
 grep -Fq -- '--input-text-background-color: var(--omazen-settings-control-background)' \
   "$CONTENT_CSS" || fail "Settings search palette"
-grep -Fq -- '--omazen-settings-control-background: color-mix(' \
-  "$CONTENT_CSS" || fail "light Settings controls soften legacy derived surfaces"
+grep -Fq -- '--omazen-settings-control-background: var(--omazen-surface-inset)' \
+  "$CONTENT_CSS" || fail "Settings controls sit inset instead of following legacy shades"
+grep -Fq -- '--button-background-color: var(--omazen-surface-raised)' \
+  "$CONTENT_CSS" || fail "buttons sit on the raised surface step"
 grep -Fq -- '--theme-bg-color: var(--omazen-background-light)' \
   "$CONTENT_CSS" || fail "managed notice palette"
 grep -Fq -- '--checkbox-background-color-checked: var(--omazen-accent)' \
@@ -536,6 +623,41 @@ grep -Fq -- '#commonDialog::part(omazen-primary-button)' \
 grep -A4 -F -- '#commonDialog::part(omazen-primary-button) {' \
   "$CONTENT_CSS" | grep -Fq -- 'color: var(--omazen-accent-foreground)' || \
   fail "common dialog primary button contrast token"
+grep -A2 -F -- ':root[data-omazen-enabled="true"]:has(#commonDialog) {' \
+  "$CONTENT_CSS" | grep -Fq -- 'background-color: transparent' || \
+  fail "common dialog frame does not paint a rectangular backdrop"
+grep -A5 -F -- '#commonDialog::part(content-box) {' \
+  "$CONTENT_CSS" | grep -Fq -- 'background-color: transparent' || \
+  fail "common dialog content stays flush inside the chrome dialog box"
+grep -A6 -F -- ':root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) {' \
+  "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-background-dark)' || \
+  fail "SubDialog box carries the themed prompt surface"
+grep -A3 -F -- '.dialogBox:not(.spotlightBox) > .dialogFrame {' \
+  "$CHROME_CSS" | grep -Fq -- 'background-color: transparent' || \
+  fail "SubDialog frame does not paint over the themed box"
+grep -A4 -F -- ':root[data-omazen-enabled="true"] #window-modal-dialog {' \
+  "$CHROME_CSS" | grep -Fq -- 'background: transparent' || \
+  fail "window-modal dialog host stays a bare container"
+grep -Fq -- '#window-modal-dialog > .dialogOverlay[topmost="true"]' \
+  "$CHROME_CSS" || fail "window-modal overlay avoids a doubled dim"
+grep -Fq -- '--omazen-surface: color-mix(in srgb, var(--omazen-background) 94%, var(--omazen-foreground))' \
+  "$CONTENT_CSS" || fail "panel surfaces derive from the canvas and foreground"
+grep -Fq -- '--card-background-color: var(--omazen-surface)' \
+  "$CONTENT_CSS" || fail "Settings cards use the derived panel surface"
+grep -Fq -- '--card-box-shadow: none' \
+  "$CONTENT_CSS" || fail "Settings cards drop the native card shadow"
+grep -Fq -- '--card-border-color: var(--omazen-surface-border)' \
+  "$CONTENT_CSS" || fail "Settings cards use a softened border"
+grep -Fq -- '--in-content-box-background: var(--omazen-surface-inset)' \
+  "$CONTENT_CSS" || fail "in-content boxes stay inset against panel surfaces"
+grep -Fq -- '--omazen-control-border: color-mix(in srgb, var(--omazen-foreground) 20%, transparent)' \
+  "$CONTENT_CSS" || fail "control edges derive from the active foreground"
+grep -Fq -- '--button-border-color: var(--omazen-control-border)' \
+  "$CONTENT_CSS" || fail "buttons use the softened control edge"
+grep -Fq -- '--input-text-border-color: var(--omazen-control-border)' \
+  "$CONTENT_CSS" || fail "text inputs use the softened control edge"
+grep -Fq -- '--border-color-interactive: var(--omazen-control-border-strong)' \
+  "$CONTENT_CSS" || fail "small interactive controls keep a firmer edge"
 grep -Fq -- '--button-text-color-primary: var(--omazen-accent-foreground)' \
   "$CONTENT_CSS" || fail "Spotlight primary button contrast"
 pass "setup installs the isolated runtime and maps Quattro colors"
@@ -721,6 +843,36 @@ fi
 grep -Fq 'current bridge error: 2026-08-24T10:02:00.000Z [ERROR] current palette error' <<<"$doctor_output" || \
   fail "doctor did not report the current bridge error"
 pass "doctor reports only a current bridge error"
+
+REPORT_ARCHIVE="$TEST_ROOT/omazen-report.tar.gz"
+report_output=$(run_omazen report --output "$REPORT_ARCHIVE")
+assert_file "$REPORT_ARCHIVE"
+REPORT_EXTRACT="$TEST_ROOT/report-extract"
+mkdir -p "$REPORT_EXTRACT"
+tar -xzf "$REPORT_ARCHIVE" -C "$REPORT_EXTRACT"
+REPORT_ROOT=$(find "$REPORT_EXTRACT" -mindepth 1 -maxdepth 1 -type d -print -quit)
+[[ -n $REPORT_ROOT ]] || fail "report archive root directory"
+for report_file in report-info.txt doctor.json status.txt versions.txt \
+  bridge.log.fragment installed-files.json; do
+  assert_file "$REPORT_ROOT/$report_file"
+done
+node -e '
+  const fs = require("node:fs");
+  const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  const hashes = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+  if (report.ok || !Array.isArray(report.checks) || !Array.isArray(hashes) ||
+      !hashes.some(entry => entry.current_sha256 && entry.state)) process.exit(1);
+' "$REPORT_ROOT/doctor.json" "$REPORT_ROOT/installed-files.json" || \
+  fail "sanitized report JSON contents"
+if grep -R -Fq "$FAKE_HOME" "$REPORT_ROOT"; then
+  fail "sanitized report leaked the configured home path"
+fi
+grep -R -Fq "\$HOME" "$REPORT_ROOT" || fail "sanitized report did not mark home paths"
+grep -Fq 'current palette error' "$REPORT_ROOT/bridge.log.fragment" || \
+  fail "report omitted the relevant bridge log fragment"
+printf '%s\n' "$report_output" | grep -Fq 'Sanitized Omazen support report created' || \
+  fail "report did not announce the created archive"
+pass "report packages sanitized diagnostics, logs, and file hashes"
 
 VALID_COLORS="$TEST_ROOT/colors.before"
 cp "$FAKE_COLORS" "$VALID_COLORS"
