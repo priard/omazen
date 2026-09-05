@@ -4,6 +4,71 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-09-05
+
+### Added
+
+- Ported upstream's sanitized `omazen report` support bundle and Zen 1.21.16b
+  compatibility validation without removing this fork's visual layer.
+- Validated the fork against native Zen `1.22b` (Firefox `155.0.1`); `omazen
+  doctor` now accepts it as a fully validated version alongside `1.21.16b`.
+
+### Fixed
+
+- Derived the tab audio indicator's glyph from the surface it sits on. The
+  speaker is a `moz-button type="icon ghost"`, so it is painted by
+  `--button-icon-fill` inside a shadow tree and never saw the tab's own color:
+  on a selected tab it stayed light against the bright accent background. The
+  pinned and Essentials badge (`.tab-icon-overlay`) likewise drew its disc from
+  Firefox's `image()` stack; both now use the palette surface and its
+  contrast-derived foreground.
+- Mapped URL-bar text selection to the active Omarchy accent with a derived
+  contrasting foreground instead of Zen's native LWT highlight colors.
+- Separated the URL bar and Essentials from the surrounding chrome with tints
+  derived from the active foreground, so the contrast follows every theme
+  without borders or shadows, while Zen's favicon-derived identity glow is
+  preserved for selected Essentials.
+- Themed the SubDialog surface that hosts Zen's quit prompt and the other
+  window-modal and tab-modal common dialogs. The prompt document stays
+  transparent, which removes the rectangular backdrop behind tab-modal
+  dialogs, and the chrome dialog box now carries a single palette panel
+  instead of a native slab wrapped around a separate card.
+- Derived Settings and other in-content panel surfaces from the canvas plus
+  the active foreground instead of the provider's background-dark, which
+  legacy Omarchy palettes may define as a genuinely dark shade even in light
+  mode. Cards now keep the same subtle step in every theme, drop the native
+  card shadow and use a foreground-derived hairline instead of the full
+  border color.
+- Replaced the hard palette border on in-content buttons, selects, inputs,
+  checkboxes, toggles and grouped option frames with edges derived from the
+  active foreground, and gave those surfaces an explicit elevation ladder:
+  canvas for fields and lists, a card step for panels and a raised step for
+  buttons. Settings controls no longer depend on the provider's
+  background-dark, so the previous light-mode workaround for legacy palettes
+  is gone. Hover and focus still snap to the accent.
+- Paired every selection-colored surface with the contrast-derived
+  `--omazen-selection-foreground` instead of the palette foreground. The
+  variable was computed on the root but had no consumers, so a theme with a
+  bright selection color left context-menu rows, selected Library and download
+  entries, active buttons and text selections at roughly 1.2:1 against their
+  own highlight. Hovering a disabled menu row now also stays on the palette
+  rather than the system `-moz-menuhoverdisabled` fill.
+- Softened the chrome edges that floating surfaces draw from the palette.
+  Popup frames, panel separators, tooltips and Zen's media card used
+  `--omazen-border` at full strength, which several Omarchy palettes place far
+  from their own surfaces and which Zen's own design asks to be a 10% overlay.
+  Frames now use a foreground-derived edge and separators a hairline, matching
+  the in-content vocabulary.
+- Lifted the media card off the sidebar with the same surface step the URL bar
+  uses, so it no longer depends on its outline on palettes whose
+  background-light equals the background. The card and its scrolling-title
+  mask now read one token.
+- Gave app-menu and arrow-panel rows palette hover and active feedback. Those
+  rows are toolbarbuttons rather than menuitems, so the context-menu selection
+  rule never reached them and they kept Zen's neutral `currentColor 5%` wash.
+- Validated the fork with Omarchy 4.0.2 and native Zen 1.21.16b based on
+  Firefox 154.0.1 (64-bit).
+
 ## [1.5.5] - 2026-08-28
 
 ### Fixed
