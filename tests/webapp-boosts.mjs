@@ -112,6 +112,8 @@ for (const data of [boostDataForPalette(light), boostDataForPalette(dark, { inve
 }
 assert.equal(boostDataForPalette(dark, { invert: true }).customCSS, GLASS_PAGE_CSS, "inverted pages read on dark glass");
 assert.equal(boostDataForPalette(dark).customCSS, "", "a site shown as is under a dark theme keeps its background");
+assert.equal(boostDataForPalette(light, { glass: false }).customCSS, "", "an opaque window keeps every page background");
+assert.equal(boostDataForPalette(dark, { invert: true, glass: false }).customCSS, "");
 assert.equal(boostDataForPalette(dark, { invert: true }).smartInvert, true, "light sites invert in dark themes");
 assert.equal(boostDataForPalette(light, { invert: true }).smartInvert, false, "light themes restore the page");
 assert.equal(boostDataForPalette(dark).smartInvert, false, "sites are not inverted unless marked light");

@@ -1420,29 +1420,30 @@
   color: var(--omazen-selection-foreground) !important;
 }
 
-/* Web apps created with `omazen webapp install --theme` are glass. Their
- * profile lets Zen draw the window with an alpha channel, so the compositor
+/* Web apps created with `omazen webapp install --theme` are glass unless made
+ * with --opaque. Their profile lets Zen draw the window with an alpha channel,
+ * so the compositor
  * blurs the wallpaper behind it. A single translucent layer of the palette
  * background tints the whole window, every surface above it is cleared, and
  * the web app's boost makes the page root transparent. */
-:root[data-omazen-enabled="true"][data-omazen-webapp] {
+:root[data-omazen-enabled="true"][data-omazen-webapp-glass] {
   --omazen-glass: color-mix(in srgb, var(--omazen-background) 70%, transparent);
   --zen-main-browser-background: transparent !important;
   --zen-main-browser-background-old: transparent !important;
   background: transparent !important;
 }
 
-:root[data-omazen-enabled="true"][data-omazen-webapp] #zen-browser-background::before {
+:root[data-omazen-enabled="true"][data-omazen-webapp-glass] #zen-browser-background::before {
   background: var(--omazen-glass) !important;
   opacity: 1 !important;
 }
 
-:root[data-omazen-enabled="true"][data-omazen-webapp] #zen-browser-background::after {
+:root[data-omazen-enabled="true"][data-omazen-webapp-glass] #zen-browser-background::after {
   background: none !important;
   opacity: 0 !important;
 }
 
-:root[data-omazen-enabled="true"][data-omazen-webapp] :is(
+:root[data-omazen-enabled="true"][data-omazen-webapp-glass] :is(
   #browser,
   #zen-main-app-wrapper,
   #zen-appcontent-wrapper,
@@ -1455,7 +1456,7 @@
   background: none !important;
 }
 
-:root[data-omazen-enabled="true"][data-omazen-webapp] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
+:root[data-omazen-enabled="true"][data-omazen-webapp-glass] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
   background: none !important;
   box-shadow: none !important;
 }

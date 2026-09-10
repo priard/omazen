@@ -108,9 +108,11 @@
   function setWebAppAttributes(root, enabled) {
     if (!webAppBoosts) return;
     const invert = Services.prefs.getBoolPref("omazen.webapp.invert", false);
+    const glass = Services.prefs.getBoolPref("omazen.webapp.glass", true);
     for (const [name, on] of [
       ["data-omazen-webapp", enabled],
       ["data-omazen-webapp-invert", enabled && invert],
+      ["data-omazen-webapp-glass", enabled && glass],
     ]) {
       if (on) root.setAttribute(name, "true");
       else root.removeAttribute(name);

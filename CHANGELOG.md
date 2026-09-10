@@ -6,6 +6,14 @@ All notable changes to Omazen are documented here.
 
 ### Added
 
+- `bootstrap.sh` installs Omazen with one command on Omarchy: it downloads the
+  latest release, verifies its SHA-256 checksum, installs missing packages
+  (`zen-browser-bin`, `inotify-tools`, `gum`) and runs the installer, which
+  also sets up Zen web apps.
+- `omazen webapp install --opaque` keeps a themed web app's window solid, and
+  the interactive installer asks whether the window should be translucent
+  (the default).
+
 - Web apps created with `--theme` are now glass: the window is a translucent
   layer of the theme background over Hyprland's blur of the wallpaper, and the
   page's own background is cleared so its text stays sharp on it. Under a

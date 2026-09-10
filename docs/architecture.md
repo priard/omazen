@@ -223,11 +223,15 @@ store is retried when that load finishes. The bridge refuses to start the
 driver unless the profile directory lies inside the web apps directory, so a
 copied preference cannot theme a regular profile.
 
-A themed web app is glass. Its profile sets `zen.widget.linux.transparency`,
+A themed web app is glass unless it was created with `--opaque` (an `opaque`
+marker, recorded as `omazen.webapp.glass` false; setup writes the transparency
+preferences as false then, because Zen keeps a preference once set). A glass
+profile sets `zen.widget.linux.transparency`,
 which gives the Zen window an alpha channel that Hyprland blurs, and
 `browser.tabs.allow_transparent_browser`, which lets the page itself be
 transparent. When the bridge runs the boost driver it marks the window root
-with `data-omazen-webapp`, and the chrome stylesheet then paints one
+with `data-omazen-webapp` and, for glass, `data-omazen-webapp-glass`; the chrome
+stylesheet then paints one
 translucent layer of the palette background on `#zen-browser-background` and
 clears every surface above it. Under a light theme, or when the page is
 inverted, the boost carries a fixed custom stylesheet that makes the page's

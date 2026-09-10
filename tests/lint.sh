@@ -16,6 +16,7 @@ command -v actionlint >/dev/null 2>&1 || {
 }
 
 shellcheck -x --source-path=SCRIPTDIR \
+  "$PROJECT_ROOT/bootstrap.sh" \
   "$PROJECT_ROOT/install.sh" \
   "$PROJECT_ROOT/uninstall.sh" \
   "$PROJECT_ROOT/hooks/theme-set" \

@@ -20,6 +20,7 @@
 
 export const WEBAPP_HOSTS_PREF = "omazen.webapp.hosts";
 export const WEBAPP_INVERT_PREF = "omazen.webapp.invert";
+export const WEBAPP_GLASS_PREF = "omazen.webapp.glass";
 export const BOOST_NAME = "Omarchy theme (Omazen web app)";
 export const BOOSTS_MANAGER_URI = "resource:///modules/zen/boosts/ZenBoostsManager.sys.mjs";
 // A themed web app window is glass: a translucent palette layer over the
@@ -210,7 +211,7 @@ export function solveFilter(lightTarget, darkTarget, favorLight) {
   };
 }
 
-export function boostDataForPalette(palette, { invert = false } = {}) {
+export function boostDataForPalette(palette, { invert = false, glass = true } = {}) {
   if (!palette || !["background", "foreground"].every(key => HEX_COLOR.test(palette[key] ?? ""))) {
     return null;
   }
@@ -244,11 +245,11 @@ export function boostDataForPalette(palette, { invert = false } = {}) {
     contrast: round(1 - strength),
     secondaryDotAngleDegDelta: round(rotation, 2),
     smartInvert,
-    // The page root is cleared only where its text stays readable on the
-    // glass: dark text on a light theme, or inverted light text on a dark one.
-    // A site shown as is under a dark theme may only have dark text, so it
-    // keeps its own background.
-    customCSS: palette.mode === "light" || smartInvert ? GLASS_PAGE_CSS : "",
+    // On a glass window the page root is cleared where its text stays
+    // readable: dark text on a light theme, or inverted light text on a dark
+    // one. A site shown as is under a dark theme may only have dark text, so
+    // it keeps its own background, as every page does in an opaque window.
+    customCSS: glass && (palette.mode === "light" || smartInvert) ? GLASS_PAGE_CSS : "",
     changeWasMade: true,
   };
 }
@@ -276,8 +277,8 @@ export function createWebAppBoostDriver({
 
   function apply() {
     if (applying || enabled === null) return;
-    const { hosts, invert } = readPrefs();
-    const desired = enabled ? boostDataForPalette(palette, { invert }) : null;
+    const { hosts, invert, glass } = readPrefs();
+    const desired = enabled ? boostDataForPalette(palette, { invert, glass }) : null;
     if (enabled && !desired) return;
     applying = true;
     try {
@@ -374,6 +375,7 @@ export function startWebAppBoosts({ profileDir, env, home, log } = {}) {
     readPrefs: () => ({
       hosts: parseHosts(prefs.getStringPref(WEBAPP_HOSTS_PREF, "")),
       invert: prefs.getBoolPref(WEBAPP_INVERT_PREF, false),
+      glass: prefs.getBoolPref(WEBAPP_GLASS_PREF, true),
     }),
     addObserver: (topic, callback) => {
       const observer = { observe: () => callback() };

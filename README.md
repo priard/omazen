@@ -52,7 +52,20 @@ unsupported Zen packaging formats are listed in the
 
 ## Install
 
-Review [the security model](docs/security.md), then run:
+On Omarchy 4 (Quattro), one command does everything: it downloads the latest
+release, checks it against its SHA-256 checksum, installs whatever is missing
+(`zen-browser-bin`, `inotify-tools`, `gum`) and runs the installer, which also
+sets up [Zen web apps](#zen-web-apps) with their launcher and Omarchy menu
+entries:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/priard/omazen/main/bootstrap.sh | bash
+```
+
+Omazen installs a privileged loader into Zen, so read
+[the security model](docs/security.md) and, if you like,
+[`bootstrap.sh`](bootstrap.sh) before running it. `OMAZEN_RELEASE=vX.Y.Z` picks
+a specific release. From a checkout, run the installer directly:
 
 ```bash
 ./install.sh
@@ -100,7 +113,7 @@ omazen doctor [--json]
 omazen disable
 omazen enable
 omazen uninstall
-omazen webapp install [--theme [--invert]] [name url [icon]]
+omazen webapp install [--theme [--invert] [--opaque]] [name url [icon]]
 omazen webapp remove [name]
 omazen webapp list
 ```
@@ -128,29 +141,43 @@ and gets its own window class, so the app
 launcher, alt-tab and Hyprland rules treat it as a separate application.
 Starting a web app that is already open focuses its window.
 
-`omazen setup` adds **Install Zen Web App** and **Remove Zen Web App** to the app
-launcher and the matching entries under Install and Remove in the Omarchy menu.
-Without arguments, `install` asks for the name and URL in a terminal and
-`remove` offers a picker. The icon may be a URL, an image file or an icon name;
-by default the site's own icon is fetched.
+The installer (and `omazen setup`) adds **Install Zen Web App** and **Remove Zen
+Web App** to the app launcher and the matching entries under Install and Remove
+in the Omarchy menu. Without arguments, `install` asks in a terminal for the
+name and URL, whether to match the Omarchy theme and, if so, whether the site is
+light and whether the window should be translucent (the default). `remove`
+offers a picker. The icon may be a URL, an image file or an icon name; by
+default the site's own icon is fetched.
 
-`--theme` is optional. It installs Omazen's runtime into that web app's profile
-and tints its pages with the active Omarchy theme through a Zen boost, following
-theme switches live. The boost is solved from the palette so that a page's
-white lands on the theme's background and its text on the foreground; other
-colors keep their lightness and lean toward those hues, so it is still a tint
-rather than a repaint. A themed web app is also glass: its window is
-a translucent layer of the theme background over Hyprland's blur of the
-wallpaper, and the page's own background is cleared so the text stays sharp on
-it. Parts of a page that paint their own background keep it.
+```bash
+omazen webapp install --theme "Ojto" https://ojto.pl
+omazen webapp install --theme --invert "Wikipedia" https://wikipedia.org
+omazen webapp install --theme --opaque "Mail" https://mail.example.com
+```
 
-Pages follow the theme's light or dark scheme, so a site with its own dark mode
-switches by itself. `--invert` is for light sites without one: while the theme
-is dark the page is inverted, images excepted, and a light theme restores it.
-Under a dark theme only such inverted pages sit on the glass; a site shown as
-is keeps its own background, because its text may be dark.
-Only profiles created this way can be themed; regular Zen profiles and their
-boosts are never touched. The [compatibility guide](docs/compatibility.md)
+### Theme-following web apps
+
+With `--theme`, a web app's pages take the colors of the active Omarchy theme
+and follow theme switches live:
+
+- **Colors.** A Zen boost is solved from the palette, so a page's white lands on
+  the theme's background (the color of Zen's own sidebar and of the terminals)
+  and its text on the theme's foreground. Other colors keep their lightness and
+  lean toward those hues: it is a tint, not a repaint, so buttons and links
+  lose some saturation.
+- **Glass.** The window is a translucent layer of the theme background over
+  Hyprland's blur of the wallpaper, and the page's own background is cleared
+  so its text stays sharp on it. `--opaque`, or answering no at the prompt,
+  keeps the window solid.
+- **Light and dark.** Pages get the theme's light or dark scheme, so a site
+  with its own dark mode switches by itself. `--invert` is for light sites
+  without one: under a dark theme the page is inverted, images excepted.
+
+Parts of a page that paint their own background keep it, tinted. Under a dark
+theme only inverted pages sit on the glass; a site shown as is keeps its own
+background, because its text may be dark. `--theme` installs Omazen's runtime
+into that one web app's profile; regular Zen profiles and their boosts are
+never touched. The [compatibility guide](docs/compatibility.md)
 lists the limits.
 
 Web apps live in `~/.local/share/omazen-webapps/`. `omazen webapp remove`

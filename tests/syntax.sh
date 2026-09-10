@@ -7,6 +7,7 @@ set -euo pipefail
 PROJECT_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 
 shell_files=(
+  "$PROJECT_ROOT/bootstrap.sh"
   "$PROJECT_ROOT/install.sh"
   "$PROJECT_ROOT/uninstall.sh"
   "$PROJECT_ROOT/hooks/theme-set"

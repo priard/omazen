@@ -41,11 +41,12 @@ const USAGE: &str = concat!(
     "Usage: omazen webapp <command> [arguments]\n",
     "\n",
     "Commands:\n",
-    "  install [--theme [--invert]] [name url [icon]]\n",
+    "  install [--theme [--invert] [--opaque]] [name url [icon]]\n",
     "                    Create a web app with its own Zen profile; without a\n",
     "                    name and URL, ask for them interactively\n",
     "                    --theme   tint its pages with the active Omarchy theme\n",
     "                    --invert  the site is light: invert it in dark themes\n",
+    "                    --opaque  keep a themed window opaque instead of glass\n",
     "  remove [name]     Remove a web app, its launcher and its profile\n",
     "  list              List installed web apps\n",
     "  launch <id>       Start or focus a web app (used by its launcher)\n",
@@ -87,6 +88,7 @@ struct WebApp {
     dir: PathBuf,
     hosts: Option<String>,
     invert: bool,
+    opaque: bool,
 }
 
 impl WebApp {
@@ -110,6 +112,7 @@ struct InstallRequest {
     icon: Option<String>,
     theme: bool,
     invert: bool,
+    opaque: bool,
 }
 
 pub(crate) fn run(arguments: &[OsString]) -> Result<(), String> {
@@ -175,6 +178,10 @@ fn parse_install_arguments(arguments: &[OsString]) -> Result<InstallRequest, Str
                 request.theme = true;
                 request.invert = true;
             }
+            "--opaque" if !options_done => {
+                request.theme = true;
+                request.opaque = true;
+            }
             "--" if !options_done => options_done = true,
             flag if !options_done && flag.starts_with("--") => {
                 return Err(format!("unknown webapp install option: {flag}"));
@@ -195,7 +202,8 @@ fn parse_install_arguments(arguments: &[OsString]) -> Result<InstallRequest, Str
         }
         _ => {
             return Err(
-                "usage: omazen webapp install [--theme [--invert]] [name url [icon]]".to_owned(),
+                "usage: omazen webapp install [--theme [--invert] [--opaque]] [name url [icon]]"
+                    .to_owned(),
             );
         }
     }
@@ -223,10 +231,17 @@ fn install(arguments: &[OsString]) -> Result<(), String> {
     fs::create_dir_all(dir.join("profile")).map_err(|error| error.to_string())?;
     match create_webapp(&paths, &request, &name, &url, &dir) {
         Ok(app) => {
-            let note = match (app.themed(), app.invert) {
-                (false, _) => "",
-                (true, false) => " (Omarchy theme)",
-                (true, true) => " (Omarchy theme, inverted in dark themes)",
+            let note = if app.themed() {
+                let mut traits = vec!["Omarchy theme"];
+                if app.invert {
+                    traits.push("inverted in dark themes");
+                }
+                if app.opaque {
+                    traits.push("opaque");
+                }
+                format!(" ({})", traits.join(", "))
+            } else {
+                String::new()
             };
             println!("Installed Zen web app '{}' → {}{note}", app.name, app.url);
             println!("Find it in the app launcher (SUPER + SPACE).");
@@ -259,6 +274,10 @@ fn prompt_install(request: &mut InstallRequest) -> Result<(), String> {
         request.invert = gum_confirm(
             "Is this a light site? (inverts it while the theme is dark)",
             false,
+        );
+        request.opaque = !gum_confirm(
+            "Make the window translucent? (theme background over the blurred wallpaper)",
+            true,
         );
     }
     Ok(())
@@ -308,11 +327,14 @@ fn create_webapp(
         if request.invert {
             write_text(&dir.join("invert"), "1")?;
         }
+        if request.opaque {
+            write_text(&dir.join("opaque"), "1")?;
+        }
         Some(hosts)
     } else {
         None
     };
-    write_profile_prefs(&profile, hosts.as_deref(), request.invert)?;
+    write_profile_prefs(&profile, hosts.as_deref(), request.invert, !request.opaque)?;
     write_user_chrome(&profile)?;
     if request.theme {
         enable_theme(paths, &profile)?;
@@ -323,30 +345,33 @@ fn create_webapp(
     Ok(app)
 }
 
-fn theme_prefs(hosts: &str, invert: bool) -> String {
+fn theme_prefs(hosts: &str, invert: bool, glass: bool) -> String {
     format!(
         concat!(
             "// Written by `omazen webapp install --theme`. Omazen's bridge reads these\n",
             "// to tint this web app's pages with the active Omarchy theme.\n",
             "user_pref(\"omazen.webapp.hosts\", \"{hosts}\");\n",
             "user_pref(\"omazen.webapp.invert\", {invert});\n",
+            "user_pref(\"omazen.webapp.glass\", {glass});\n",
             "// Glass: Zen draws the window with an alpha channel and lets the page be\n",
-            "// transparent, so the compositor's blur shows through Omazen's tint.\n",
-            "user_pref(\"zen.widget.linux.transparency\", true);\n",
-            "user_pref(\"browser.tabs.allow_transparent_browser\", true);\n",
+            "// transparent, so the compositor's blur shows through Omazen's tint. Both\n",
+            "// are written either way, because Zen keeps a preference once set.\n",
+            "user_pref(\"zen.widget.linux.transparency\", {glass});\n",
+            "user_pref(\"browser.tabs.allow_transparent_browser\", {glass});\n",
             "// fx-autoconfig, which Omazen's runtime needs, otherwise announces itself\n",
             "// in a notification bar on the web app's first start.\n",
             "user_pref(\"userChromeJS.firstRunShown\", true);\n"
         ),
         hosts = hosts,
-        invert = invert
+        invert = invert,
+        glass = glass
     )
 }
 
-fn managed_prefs(hosts: Option<&str>, invert: bool) -> String {
+fn managed_prefs(hosts: Option<&str>, invert: bool, glass: bool) -> String {
     let mut prefs = PROFILE_PREFS.to_owned();
     if let Some(hosts) = hosts {
-        prefs.push_str(&theme_prefs(hosts, invert));
+        prefs.push_str(&theme_prefs(hosts, invert, glass));
     }
     prefs
 }
@@ -382,10 +407,15 @@ fn merge_profile_prefs(managed: &str, existing: &str) -> String {
 }
 
 /// Returns true when the file changed; Zen reads it on the web app's next start.
-fn write_profile_prefs(profile: &Path, hosts: Option<&str>, invert: bool) -> Result<bool, String> {
+fn write_profile_prefs(
+    profile: &Path,
+    hosts: Option<&str>,
+    invert: bool,
+    glass: bool,
+) -> Result<bool, String> {
     let path = profile.join("user.js");
     let existing = fs::read_to_string(&path).unwrap_or_default();
-    let text = merge_profile_prefs(&managed_prefs(hosts, invert), &existing);
+    let text = merge_profile_prefs(&managed_prefs(hosts, invert, glass), &existing);
     if text == existing {
         return Ok(false);
     }
@@ -555,12 +585,17 @@ fn remove_webapp_files(paths: &RuntimePaths, app: &WebApp) -> Result<(), String>
 fn list() -> Result<(), String> {
     let paths = runtime_paths()?;
     for app in installed_webapps(&paths) {
-        let theme = match (app.themed(), app.invert) {
-            (false, _) => "",
-            (true, false) => "theme",
-            (true, true) => "theme,invert",
-        };
-        println!("{:<24} {:<13} {}", app.name, theme, app.url);
+        let mut traits = Vec::new();
+        if app.themed() {
+            traits.push("theme");
+            if app.invert {
+                traits.push("invert");
+            }
+            if app.opaque {
+                traits.push("opaque");
+            }
+        }
+        println!("{:<24} {:<20} {}", app.name, traits.join(","), app.url);
     }
     Ok(())
 }
@@ -670,6 +705,7 @@ fn load_webapp(dir: &Path) -> Option<WebApp> {
         icon: read("icon").unwrap_or_else(|| FALLBACK_ICON.to_owned()),
         hosts: read("hosts"),
         invert: dir.join("invert").is_file(),
+        opaque: dir.join("opaque").is_file(),
         dir: dir.to_path_buf(),
         slug,
     })
@@ -1159,8 +1195,13 @@ pub(crate) fn install_integration(paths: &RuntimePaths) -> Result<(), String> {
         if let Err(error) = write_launcher(paths, &app) {
             eprintln!("WARNING: {error}");
         }
-        let refreshed = write_profile_prefs(&app.profile(), app.hosts.as_deref(), app.invert)
-            .and_then(|prefs| Ok(write_user_chrome(&app.profile())? || prefs));
+        let refreshed = write_profile_prefs(
+            &app.profile(),
+            app.hosts.as_deref(),
+            app.invert,
+            !app.opaque,
+        )
+        .and_then(|prefs| Ok(write_user_chrome(&app.profile())? || prefs));
         match refreshed {
             Ok(true) => println!(
                 "Updated Zen web app settings (applied on its next start): {}",
@@ -1509,7 +1550,17 @@ mod tests {
                 icon: None,
                 theme: true,
                 invert: true,
+                opaque: false,
             })
+        );
+        let opaque: Vec<OsString> = ["--opaque", "Mail", "mail.example.com"]
+            .iter()
+            .map(OsString::from)
+            .collect();
+        let request = parse_install_arguments(&opaque).unwrap();
+        assert!(
+            request.theme && request.opaque && !request.invert,
+            "--opaque implies --theme"
         );
         let literal: Vec<OsString> = ["--", "--weird", "https://x.io"]
             .iter()
@@ -1524,7 +1575,14 @@ mod tests {
 
     #[test]
     fn profile_prefs_are_regenerated_and_user_prefs_kept() {
-        let managed = managed_prefs(Some("docs.example.com"), true);
+        let managed = managed_prefs(Some("docs.example.com"), true, true);
+        assert!(managed.contains("user_pref(\"zen.widget.linux.transparency\", true);"));
+        let opaque = managed_prefs(Some("docs.example.com"), false, false);
+        assert!(opaque.contains("user_pref(\"omazen.webapp.glass\", false);"));
+        assert!(
+            opaque.contains("user_pref(\"zen.widget.linux.transparency\", false);"),
+            "an opaque app turns a previously set transparency off again"
+        );
         assert!(managed.contains("user_pref(\"zen.theme.content-element-separation\", 0);"));
         assert!(managed.contains("user_pref(\"omazen.webapp.hosts\", \"docs.example.com\");"));
         let old = concat!(
@@ -1548,11 +1606,11 @@ mod tests {
             "refreshing is idempotent"
         );
         assert!(
-            !managed_prefs(None, true).contains("omazen.webapp"),
+            !managed_prefs(None, true, true).contains("omazen.webapp"),
             "unthemed apps get no theme prefs"
         );
         assert!(
-            !managed_prefs(None, false).contains("zen.widget.linux.transparency"),
+            !managed_prefs(None, false, true).contains("zen.widget.linux.transparency"),
             "only themed apps are glass"
         );
     }

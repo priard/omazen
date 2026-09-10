@@ -868,6 +868,15 @@ grep -Fq 'user_pref("userChromeJS.firstRunShown", true);' "$DOCS_PROFILE/user.js
   fail "themed web app hides the fx-autoconfig first-run bar"
 grep -Fq 'user_pref("zen.widget.linux.transparency", true);' "$DOCS_PROFILE/user.js" || \
   fail "themed web app window is glass"
+run_omazen webapp install --opaque "Plain Site" "https://plain.example.com" zen-browser >/dev/null
+PLAIN_PROFILE=$(cd -- "$FAKE_WEBAPPS/plain-site/profile" && pwd -P)
+grep -Fq 'user_pref("omazen.webapp.glass", false);' "$PLAIN_PROFILE/user.js" || \
+  fail "opaque web app records that it is not glass"
+grep -Fq 'user_pref("zen.widget.linux.transparency", false);' "$PLAIN_PROFILE/user.js" || \
+  fail "opaque web app keeps its window opaque"
+run_omazen webapp list | grep -Eq '^Plain Site +theme,opaque +https://plain\.example\.com$' || \
+  fail "webapp list marks opaque apps"
+run_omazen webapp remove "Plain Site" >/dev/null
 assert_file "$DOCS_PROFILE/chrome/utils/boot.sys.mjs"
 assert_file "$DOCS_PROFILE/chrome/JS/omazen-bridge.uc.js"
 assert_file "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs"
