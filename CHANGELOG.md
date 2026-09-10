@@ -4,6 +4,8 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-10
+
 ### Added
 
 - `bootstrap.sh` installs Omazen with one command on Omarchy: it downloads the

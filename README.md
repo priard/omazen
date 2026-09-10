@@ -34,10 +34,11 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.7.0` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.8.0` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
-the qualified command and rollback contracts, and adds
-[Zen web apps](#zen-web-apps) with optional theme-following pages. Canonical stylesheet sources
+the qualified command and rollback contracts. It installs with one command and
+includes [Zen web apps](#zen-web-apps) whose pages can take the theme's own
+colors on a translucent, blurred window. Canonical stylesheet sources
 remain unversioned in the repository and are installed under release-versioned
 names for `chrome://` cache busting. The shared event-driven watcher, automatic
 polling fallback and external palette-provider compatibility remain intact. The

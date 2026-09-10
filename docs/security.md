@@ -21,8 +21,8 @@ chrome/JS/Omazen/OmazenChild.sys.mjs
 chrome/JS/Omazen/OmazenPalette.sys.mjs
 chrome/JS/Omazen/OmazenWatcher.sys.mjs
 chrome/JS/Omazen/OmazenBoosts.sys.mjs
-chrome/JS/Omazen/omazen-chrome-v1.7.0.css
-chrome/JS/Omazen/omazen-content-v1.7.0.css
+chrome/JS/Omazen/omazen-chrome-v1.8.0.css
+chrome/JS/Omazen/omazen-content-v1.8.0.css
 ```
 
 The same files are installed into the dedicated profile of each web app created
