@@ -18,6 +18,7 @@ done
 
 javascript_files=(
   "$PROJECT_ROOT/zen/omazen-bridge.uc.js"
+  "$PROJECT_ROOT/zen/Omazen/OmazenBoosts.sys.mjs"
   "$PROJECT_ROOT/zen/Omazen/OmazenChild.sys.mjs"
   "$PROJECT_ROOT/zen/Omazen/OmazenPalette.sys.mjs"
   "$PROJECT_ROOT/zen/Omazen/OmazenParent.sys.mjs"
@@ -28,6 +29,7 @@ javascript_files=(
   "$PROJECT_ROOT/tests/generate-benchmark-report.mjs"
   "$PROJECT_ROOT/tests/process-tree-metrics.mjs"
   "$PROJECT_ROOT/tests/watcher-regressions.mjs"
+  "$PROJECT_ROOT/tests/webapp-boosts.mjs"
 )
 for javascript_file in "${javascript_files[@]}"; do
   node --check "$javascript_file"
