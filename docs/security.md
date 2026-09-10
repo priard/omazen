@@ -74,8 +74,8 @@ The first two may be reused from a compatible pre-existing fx-autoconfig install
   apps directory *and* carries the `omazen.webapp.hosts` preference that
   `omazen webapp install --theme` writes; every other profile, including all
   regular Zen profiles, returns before the boost manager is even loaded. The
-  driver writes only numeric color parameters derived from the validated accent
-  and mode, plus one fixed stylesheet that makes the page root transparent,
+  driver writes only numeric color parameters derived from the validated
+  background, foreground and mode, plus one fixed stylesheet that makes the page root transparent,
   into one boost per recorded host that it names and owns. Hosts must
   be plain DNS names, and boosts the user created are left alone. Disabling
   Omazen removes the owned boosts.

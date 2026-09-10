@@ -136,8 +136,10 @@ by default the site's own icon is fetched.
 
 `--theme` is optional. It installs Omazen's runtime into that web app's profile
 and tints its pages with the active Omarchy theme through a Zen boost, following
-theme switches live. It is a tint in the theme's accent rather than a repaint
-with the palette's exact colors. A themed web app is also glass: its window is
+theme switches live. The boost is solved from the palette so that a page's
+white lands on the theme's background and its text on the foreground; other
+colors keep their lightness and lean toward those hues, so it is still a tint
+rather than a repaint. A themed web app is also glass: its window is
 a translucent layer of the theme background over Hyprland's blur of the
 wallpaper, and the page's own background is cleared so the text stays sharp on
 it. Parts of a page that paint their own background keep it.

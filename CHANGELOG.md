@@ -18,6 +18,11 @@ All notable changes to Omazen are documented here.
 
 ### Changed
 
+- Themed web apps now take the theme's actual colors. The boost used to tint
+  pages toward the theme's accent, so a blue-accented theme turned pages blue
+  whatever its background. It is now solved from the palette so that a page's
+  white lands on the theme's background and its text on the foreground, and,
+  for inverted pages, on the colors Zen's inversion turns into them.
 - Web app windows now have square corners. Zen keeps a minimum radius on the
   page that no preference removes, so each web app profile gets a
   `userChrome.css` that `omazen setup` refreshes until the user takes it over.

@@ -210,7 +210,13 @@ count as Omazen profiles, so setup upgrades their runtime, doctor checks it and
 uninstall removes it. In such a profile the bridge starts
 `OmazenBoosts.sys.mjs`, which turns each applied palette into a Zen boost per
 recorded host through Zen's own boosts manager, so open tabs update without a
-reload. Zen notifies boost updates synchronously from inside its own save, so
+reload. Zen's boost is a duotone filter in Oklab: dark colors lean toward an
+accent and light ones toward a hue-rotated complement, with a single strength
+that blends chroma, pulls lightness and turns hue. The driver solves the
+accent, the rotation and the strength from the palette so that a page's white
+lands on the theme background and its text on the foreground. For an inverted
+page it aims at the colors that Zen's lightness inversion and channel floor
+turn into them. Zen notifies boost updates synchronously from inside its own save, so
 the driver reacts only through a short timer and settles into a no-op once the
 boost matches the palette; a save attempted before Zen has loaded its boost
 store is retried when that load finishes. The bridge refuses to start the
