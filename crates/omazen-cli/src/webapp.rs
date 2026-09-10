@@ -61,6 +61,11 @@ user_pref("zen.view.compact.enable-at-startup", true);
 user_pref("zen.view.compact.hide-tabbar", true);
 user_pref("zen.view.compact.hide-toolbar", true);
 user_pref("zen.view.compact.show-sidebar-and-toolbar-on-hover", false);
+// Zen frames the page with a gap and a rounded, shadowed card, which in compact
+// mode also reads as a panel edge along the left side. A web app has the window
+// border as its only frame.
+user_pref("zen.theme.content-element-separation", 0);
+user_pref("zen.theme.border-radius", 0);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.aboutwelcome.enabled", false);
 user_pref("browser.startup.homepage_override.mstone", "ignore");
@@ -288,20 +293,21 @@ fn create_webapp(
     write_text(&dir.join("url"), url)?;
     write_text(&dir.join("icon"), &icon)?;
     let profile = fs::canonicalize(dir.join("profile")).map_err(|error| error.to_string())?;
-    let mut prefs = PROFILE_PREFS.to_owned();
-    if request.theme {
+    let hosts = if request.theme {
         let hosts = resolve_hosts(url);
         if hosts.is_empty() {
             return Err(format!("could not determine the host of {url}"));
         }
         let hosts = hosts.join(",");
-        prefs.push_str(&theme_prefs(&hosts, request.invert));
         write_text(&dir.join("hosts"), &hosts)?;
         if request.invert {
             write_text(&dir.join("invert"), "1")?;
         }
-    }
-    write_text(&profile.join("user.js"), prefs.trim_end())?;
+        Some(hosts)
+    } else {
+        None
+    };
+    write_profile_prefs(&profile, hosts.as_deref(), request.invert)?;
     if request.theme {
         enable_theme(paths, &profile)?;
     }
@@ -325,6 +331,56 @@ fn theme_prefs(hosts: &str, invert: bool) -> String {
         hosts = hosts,
         invert = invert
     )
+}
+
+fn managed_prefs(hosts: Option<&str>, invert: bool) -> String {
+    let mut prefs = PROFILE_PREFS.to_owned();
+    if let Some(hosts) = hosts {
+        prefs.push_str(&theme_prefs(hosts, invert));
+    }
+    prefs
+}
+
+fn pref_name(line: &str) -> Option<&str> {
+    line.trim_start()
+        .strip_prefix("user_pref(\"")?
+        .split('"')
+        .next()
+}
+
+// The preferences Omazen writes are regenerated; any preference the user
+// added to the web app's user.js is kept after them.
+fn merge_profile_prefs(managed: &str, existing: &str) -> String {
+    let names: Vec<&str> = managed.lines().filter_map(pref_name).collect();
+    let kept: Vec<&str> = existing
+        .lines()
+        .filter(|line| {
+            pref_name(line)
+                .is_some_and(|name| !names.contains(&name) && !name.starts_with("omazen.webapp."))
+        })
+        .collect();
+    let mut text = managed.trim_end().to_owned();
+    text.push('\n');
+    if !kept.is_empty() {
+        text.push_str("// Kept from this web app's own configuration.\n");
+        for line in kept {
+            text.push_str(line.trim());
+            text.push('\n');
+        }
+    }
+    text
+}
+
+/// Returns true when the file changed; Zen reads it on the web app's next start.
+fn write_profile_prefs(profile: &Path, hosts: Option<&str>, invert: bool) -> Result<bool, String> {
+    let path = profile.join("user.js");
+    let existing = fs::read_to_string(&path).unwrap_or_default();
+    let text = merge_profile_prefs(&managed_prefs(hosts, invert), &existing);
+    if text == existing {
+        return Ok(false);
+    }
+    fs::write(&path, text).map_err(|error| error.to_string())?;
+    Ok(true)
 }
 
 // A boost is keyed on the exact host of the page, so record both the host a
@@ -1057,10 +1113,19 @@ pub(crate) fn install_integration(paths: &RuntimePaths) -> Result<(), String> {
         &paths.integration_manifest,
     )?;
     // Launchers point at the installed `omazen`; rewrite them so a reinstall
-    // (or an earlier `omazen uninstall`) leaves every web app startable again.
+    // (or an earlier `omazen uninstall`) leaves every web app startable again,
+    // and bring each profile's managed preferences up to this release.
     for app in installed_webapps(paths) {
         if let Err(error) = write_launcher(paths, &app) {
             eprintln!("WARNING: {error}");
+        }
+        match write_profile_prefs(&app.profile(), app.hosts.as_deref(), app.invert) {
+            Ok(true) => println!(
+                "Updated Zen web app preferences (applied on its next start): {}",
+                app.name
+            ),
+            Ok(false) => {}
+            Err(error) => eprintln!("WARNING: {}: {error}", app.name),
         }
     }
     install_menu_block(paths)?;
@@ -1413,6 +1478,37 @@ mod tests {
         assert!(parse_install_arguments(&unknown).is_err());
         let one: Vec<OsString> = ["Mail"].iter().map(OsString::from).collect();
         assert!(parse_install_arguments(&one).is_err());
+    }
+
+    #[test]
+    fn profile_prefs_are_regenerated_and_user_prefs_kept() {
+        let managed = managed_prefs(Some("docs.example.com"), true);
+        assert!(managed.contains("user_pref(\"zen.theme.content-element-separation\", 0);"));
+        assert!(managed.contains("user_pref(\"omazen.webapp.hosts\", \"docs.example.com\");"));
+        let old = concat!(
+            "user_pref(\"zen.view.compact.hide-tabbar\", true);\n",
+            "user_pref(\"omazen.webapp.hosts\", \"stale.example.com\");\n",
+            "user_pref(\"zenwebapp.theme.hosts\", \"poc.example.com\");\n",
+            "  user_pref(\"layout.css.devPixelsPerPx\", \"1.25\");\n"
+        );
+        let merged = merge_profile_prefs(&managed, old);
+        assert!(merged.starts_with(managed.trim_end()));
+        assert!(merged.ends_with("user_pref(\"layout.css.devPixelsPerPx\", \"1.25\");\n"));
+        assert!(merged.contains("user_pref(\"zenwebapp.theme.hosts\", \"poc.example.com\");"));
+        assert!(
+            !merged.contains("stale.example.com"),
+            "Omazen's own preferences are regenerated"
+        );
+        assert_eq!(merged.matches("zen.view.compact.hide-tabbar").count(), 1);
+        assert_eq!(
+            merge_profile_prefs(&managed, &merged),
+            merged,
+            "refreshing is idempotent"
+        );
+        assert!(
+            !managed_prefs(None, true).contains("omazen.webapp"),
+            "unthemed apps get no theme prefs"
+        );
     }
 
     #[test]

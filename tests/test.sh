@@ -829,6 +829,8 @@ if grep -Fq 'omazen.webapp.hosts' "$MAIL_APP/profile/user.js"; then
   fail "an unthemed web app must not opt into page theming"
 fi
 assert_absent "$MAIL_APP/profile/chrome"
+grep -Fq 'user_pref("zen.theme.content-element-separation", 0);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile drops Zen's content frame"
 grep -Fxq 'X-Omazen-Webapp=mail' "$MAIL_LAUNCHER" || fail "web app launcher carries the ownership marker"
 grep -Fxq 'StartupWMClass=omazen-webapp-mail' "$MAIL_LAUNCHER" || fail "web app launcher has its own window class"
 grep -Eq '^Exec=".*/omazen" webapp launch mail$' "$MAIL_LAUNCHER" || fail "web app launcher starts omazen webapp launch"
@@ -869,7 +871,13 @@ grep -Fq "fx-autoconfig profile runtime: $DOCS_PROFILE" <<<"$doctor_webapps" || 
 grep -Fq 'Zen web app: Docs Site (Omarchy theme)' <<<"$doctor_webapps" || fail "doctor lists web apps"
 grep -Fq 'Omarchy menu offers Zen web apps' <<<"$doctor_webapps" || fail "doctor checks the menu actions"
 rm -f "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs" "$MAIL_LAUNCHER"
+printf '%s\n' 'user_pref("zen.view.compact.enable-at-startup", true);' \
+  'user_pref("layout.css.devPixelsPerPx", "1.25");' >"$MAIL_APP/profile/user.js"
 run_omazen setup >/dev/null
+grep -Fq 'user_pref("zen.theme.content-element-separation", 0);' "$MAIL_APP/profile/user.js" || \
+  fail "setup refreshes the preferences Omazen manages in web app profiles"
+grep -Fq 'user_pref("layout.css.devPixelsPerPx", "1.25");' "$MAIL_APP/profile/user.js" || \
+  fail "setup keeps preferences the user added to a web app profile"
 assert_file "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs"
 assert_file "$MAIL_LAUNCHER"
 run_omazen webapp remove "Docs Site" >/dev/null

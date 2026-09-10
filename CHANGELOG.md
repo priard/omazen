@@ -4,6 +4,17 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Web app windows no longer show Zen's content frame. The gap Zen leaves
+  around the page read as a rounded, shadowed card and, in compact mode, as a
+  panel edge along the left side; web app profiles now set
+  `zen.theme.content-element-separation` and `zen.theme.border-radius` to 0,
+  so the window border is the only frame. Regular Zen profiles are unchanged.
+- `omazen setup` now regenerates the preferences Omazen manages in each web
+  app profile, so existing web apps pick up such changes on their next start,
+  while preferences the user added are kept.
+
 ## [1.7.0] - 2026-09-10
 
 ### Added

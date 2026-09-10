@@ -185,7 +185,11 @@ web app lives in `~/.local/share/omazen-webapps/<id>/` (`$XDG_DATA_HOME` when
 set): plain-text `name`, `url` and `icon` files, optional `hosts` and `invert`
 markers, and a dedicated Zen `profile`. That profile's `user.js` starts Zen in
 compact mode with the tab bar and toolbar hidden and no hover reveal, and skips
-first-run, update and default-browser prompts. The launcher
+first-run, update and default-browser prompts. It also removes the gap Zen
+leaves around the page, which otherwise reads as a rounded, shadowed card and,
+in compact mode, as a panel edge on the left, so the window border is the web
+app's only frame. Setup regenerates these managed preferences in every web app
+profile and keeps any preference the user added. The launcher
 `~/.local/share/applications/omazen-webapp-<id>.desktop` carries an
 `X-Omazen-Webapp` ownership marker and runs `omazen webapp launch <id>`, which
 focuses the web app's window when Hyprland already shows one and otherwise
