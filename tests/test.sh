@@ -513,8 +513,10 @@ grep -Fq -- '--button-text-color-primary-active: var(--omazen-selection-foregrou
   "$CONTENT_CSS" || fail "active primary buttons pair selection background with selection text"
 grep -Fq -- '--theme-selection-color: var(--omazen-selection-foreground)' \
   "$CONTENT_CSS" || fail "devtools selection text follows the derived foreground"
+# shellcheck disable=SC2016 # Match the literal JavaScript template, not a shell expansion.
 grep -Fq -- '--button-text-color-active: ${selectionText}' \
   "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "bridge active buttons carry the derived selection text"
+# shellcheck disable=SC2016 # Match the literal JavaScript template, not a shell expansion.
 grep -Fq -- '--theme-selection-color: ${selectionText}' \
   "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "bridge devtools selection text follows the derived foreground"
 grep -A2 -F -- ':root[data-omazen-enabled="true"] menupopup::part(content) {' \

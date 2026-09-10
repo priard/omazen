@@ -93,7 +93,9 @@ assert_pixel "document surface" 10 10 "srgba(16,32,48,1)"
 assert_pixel "header surface" 900 70 "srgba(32,48,64,1)"
 assert_pixel "card surface" 450 350 "srgba(8,16,24,1)"
 assert_pixel "marketplace button" 220 245 "srgba(32,48,64,1)"
-assert_pixel "search input" 780 245 "srgba(8,16,24,1)"
+# Settings controls sit inset on the canvas (--omazen-surface-inset), not on
+# background_dark, which legacy palettes may define as a dark shade in light mode.
+assert_pixel "search input" 780 245 "srgba(16,32,48,1)"
 assert_pixel "scroll content" 80 570 "srgba(8,16,24,1)"
 assert_pixel "scrollbar thumb" 958 450 "srgba(160,176,192,1)"
 
