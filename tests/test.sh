@@ -208,6 +208,79 @@ pass "Omarchy 3 is rejected before setup changes"
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "palette mode mapping"
 grep -Fq '"background_dark": "#eeeeee"' "$FAKE_STATE/palette.json" || fail "palette background mapping"
 cp "$FAKE_COLORS" "$TEST_ROOT/full-colors.toml"
+# Legacy themes are resolved through Omarchy's own omarchy-theme-color. Replay
+# its output for the fixture below (recorded on Omarchy 4.0.2) so this group
+# also runs where Omarchy is not installed, such as CI; what is under test is
+# how Omazen reads the resolver's output.
+THEME_COLOR_BIN="$TEST_ROOT/theme-color-bin"
+mkdir -p "$THEME_COLOR_BIN"
+cat >"$THEME_COLOR_BIN/omarchy-theme-color" <<'RESOLVER'
+#!/bin/bash
+[[ $# == 3 && $1 == --file && -f $2 && $3 == --all ]] || exit 2
+printf '%s\n' "$*" >>"${0%/*}/calls"
+while read -r key value; do
+  printf '%s\t%s\n' "$key" "$value"
+done <<'COLORS'
+accent #85b34c
+active_border_color #496c1e
+background #fdf6ee
+bg #fdf6ee
+blue #5e8e28
+bright_blue #496c1e
+bright_cyan #4a6b4d
+bright_fg #22211d
+bright_foreground #22211d
+bright_green #1b2e1c
+bright_magenta #28463c
+bright_purple #28463c
+bright_red #e03c20
+bright_yellow #6b5237
+brown #45361f
+color0 #fdf6ee
+color1 #df2b0d
+color10 #1b2e1c
+color11 #6b5237
+color12 #496c1e
+color13 #28463c
+color14 #4a6b4d
+color15 #22211d
+color2 #29472a
+color3 #8a6c3e
+color4 #5e8e28
+color5 #28473f
+color6 #3d6b52
+color7 #22211d
+color8 #a09080
+color9 #e03c20
+cursor #22211d
+cyan #3d6b52
+dark_background #beb9b3
+dark_bg #beb9b3
+dark_fg #a09080
+dark_foreground #a09080
+darker_background #7f7b77
+darker_bg #7f7b77
+fg #22211d
+foreground #22211d
+green #29472a
+light_fg #22211d
+light_foreground #22211d
+lighter_background #fdf6ee
+lighter_bg #fdf6ee
+magenta #28473f
+mode light
+muted #a09080
+orange #8a6c3e
+purple #28473f
+red #df2b0d
+selection #85b34c
+selection_background #85b34c
+selection_foreground #fdf6ee
+theme_type light
+yellow #8a6c3e
+COLORS
+RESOLVER
+chmod +x "$THEME_COLOR_BIN/omarchy-theme-color"
 cat >"$FAKE_COLORS" <<'EOF'
 accent = "#85b34c"
 active_border_color = "#496c1e"
@@ -232,7 +305,9 @@ color13 = "#28463c"
 color14 = "#4a6b4d"
 color15 = "#22211d"
 EOF
-run_omazen sync >/dev/null
+PATH="$THEME_COLOR_BIN:$PATH" run_omazen sync >/dev/null
+grep -Fq -- "--file $FAKE_COLORS --all" "$THEME_COLOR_BIN/calls" || \
+  fail "legacy themes are resolved through omarchy-theme-color"
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "legacy theme mode resolution"
 grep -Fq '"background": "#fdf6ee"' "$FAKE_STATE/palette.json" || fail "legacy theme background resolution"
 grep -Fq '"background_dark": "#beb9b3"' "$FAKE_STATE/palette.json" || fail "legacy theme dark surface derivation"
@@ -416,6 +491,34 @@ grep -Fq -- 'background-image: none !important;' \
 grep -Fq -- 'fill: var(--omazen-foreground) !important;' \
   <<< "$AUDIO_OVERLAY_RULE" || \
   fail "pinned tab audio badge glyph on the palette foreground"
+FOLDER_HOVER_SURFACE_RULE=$(sed -n \
+  '/zen-folder > \.tab-group-label-container:hover {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- '--tab-background-color-hover: var(--omazen-accent) !important;' \
+  <<< "$FOLDER_HOVER_SURFACE_RULE" || \
+  fail "folder hover paints the accent surface its foreground already assumes"
+grep -Fq -- '-webkit-text-fill-color: var(--omazen-accent-foreground) !important;' \
+  "$CHROME_CSS" || \
+  fail "live folder label escapes Zen's gradient text fill"
+SUBLABEL_RULE=$(sed -n \
+  '/\.tab-label-container \.zen-tab-sublabel {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'opacity: 1 !important;' <<< "$SUBLABEL_RULE" || \
+  fail "tab sublabel drops its fixed alpha on accent surfaces"
+grep -Fq -- '.urlbarView-title-separator::before {' "$CHROME_CSS" || \
+  fail "urlbar title separator follows the palette"
+URLBAR_ROW_RULE=$(sed -n \
+  '/\.urlbarView-row {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'color: var(--omazen-foreground) !important;' \
+  <<< "$URLBAR_ROW_RULE" || \
+  fail "urlbar result rows use the palette foreground"
+URLBAR_SELECTED_RULE=$(sed -n \
+  '/\.urlbarView-row\[selected\] {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background-color: var(--omazen-selection) !important;' \
+  <<< "$URLBAR_SELECTED_RULE" || \
+  fail "selected urlbar row uses the palette selection"
 if sed -n '/#zen-tabbox-wrapper {/,/^}/p' "$CHROME_CSS" | \
   grep -Fq -- 'box-shadow: none'; then
   fail "content wrapper must not suppress Zen elevation"
@@ -485,8 +588,10 @@ grep -Fq -- '--button-text-color-primary-active: var(--omazen-selection-foregrou
   "$CONTENT_CSS" || fail "active primary buttons pair selection background with selection text"
 grep -Fq -- '--theme-selection-color: var(--omazen-selection-foreground)' \
   "$CONTENT_CSS" || fail "devtools selection text follows the derived foreground"
+# shellcheck disable=SC2016 # Match the literal JavaScript template, not a shell expansion.
 grep -Fq -- '--button-text-color-active: ${selectionText}' \
   "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "bridge active buttons carry the derived selection text"
+# shellcheck disable=SC2016 # Match the literal JavaScript template, not a shell expansion.
 grep -Fq -- '--theme-selection-color: ${selectionText}' \
   "$PROJECT_ROOT/zen/omazen-bridge.uc.js" || fail "bridge devtools selection text follows the derived foreground"
 grep -A2 -F -- ':root[data-omazen-enabled="true"] menupopup::part(content) {' \
@@ -661,6 +766,122 @@ grep -Fq -- '--border-color-interactive: var(--omazen-control-border-strong)' \
 grep -Fq -- '--button-text-color-primary: var(--omazen-accent-foreground)' \
   "$CONTENT_CSS" || fail "Spotlight primary button contrast"
 pass "setup installs the isolated runtime and maps Quattro colors"
+
+FAKE_APPLICATIONS="$FAKE_HOME/.local/share/applications"
+FAKE_MENU="$FAKE_HOME/.config/omarchy/extensions/omarchy-menu.jsonc"
+FAKE_WEBAPPS="$FAKE_HOME/.local/share/omazen-webapps"
+assert_file "$FAKE_APPLICATIONS/org.omazen.WebAppInstall.desktop"
+assert_file "$FAKE_APPLICATIONS/org.omazen.WebAppRemove.desktop"
+grep -Fq ' webapp install' "$FAKE_APPLICATIONS/org.omazen.WebAppInstall.desktop" || \
+  fail "install launcher runs omazen webapp install"
+grep -Fq ' webapp remove' "$FAKE_APPLICATIONS/org.omazen.WebAppRemove.desktop" || \
+  fail "remove launcher runs omazen webapp remove"
+assert_file "$FAKE_MENU"
+
+# Omarchy strips whole-line // comments and trailing commas before JSON.parse.
+menu_json_keys() {
+  # shellcheck disable=SC2016 # The JavaScript regex replacement uses $1, not the shell.
+  node -e '
+    const fs = require("node:fs");
+    const raw = fs.readFileSync(process.argv[1], "utf8");
+    const stripped = raw.replace(/^\s*\/\/[^\n]*(\n|$)/gm, "").replace(/,(\s*[}\]])/g, "$1");
+    console.log(Object.keys(JSON.parse(stripped)).join(" "));
+  ' "$1"
+}
+[[ $(menu_json_keys "$FAKE_MENU") == "install.omazen-webapp remove.omazen-webapp" ]] || \
+  fail "setup creates a valid Omarchy menu extension"
+cat >"$FAKE_MENU" <<'EOF'
+{
+  // Personal entries.
+  "personal": {"icon":"","label":"Personal"},
+  "personal.notes": {"label":"Notes","action":"true"}
+}
+EOF
+chmod 600 "$FAKE_MENU"
+cp "$FAKE_MENU" "$TEST_ROOT/menu.before"
+run_omazen setup >/dev/null
+[[ $(menu_json_keys "$FAKE_MENU") == "install.omazen-webapp remove.omazen-webapp personal personal.notes" ]] || \
+  fail "setup adds web app actions without touching user menu entries"
+grep -Fq '// Personal entries.' "$FAKE_MENU" || fail "setup keeps user menu comments"
+[[ $(stat -c '%a' "$FAKE_MENU") == 600 ]] || fail "setup keeps the menu file permissions"
+cp "$FAKE_MENU" "$TEST_ROOT/menu.once"
+run_omazen setup >/dev/null
+cmp -s "$FAKE_MENU" "$TEST_ROOT/menu.once" || fail "repeated setup rewrote the menu block"
+[[ $(grep -c '>>> omazen web apps' "$FAKE_MENU") == 1 ]] || fail "setup keeps a single web app block"
+MENU_TARGET="$TEST_ROOT/dotfiles/omarchy-menu.jsonc"
+mkdir -p "$(dirname -- "$MENU_TARGET")"
+cp "$TEST_ROOT/menu.before" "$MENU_TARGET"
+ln -sfn "$MENU_TARGET" "$FAKE_MENU"
+run_omazen setup >/dev/null
+[[ -L $FAKE_MENU ]] || fail "setup replaced a symlinked menu file"
+grep -Fq '>>> omazen web apps' "$MENU_TARGET" || fail "setup writes through a symlinked menu file"
+rm -f "$FAKE_MENU"
+cp "$TEST_ROOT/menu.once" "$FAKE_MENU"
+pass "setup adds web app launchers and Omarchy menu actions without touching user entries"
+
+run_omazen webapp install "Mail" "mail.example.com" zen-browser >/dev/null
+MAIL_APP="$FAKE_WEBAPPS/mail"
+MAIL_LAUNCHER="$FAKE_APPLICATIONS/omazen-webapp-mail.desktop"
+[[ $(<"$MAIL_APP/url") == "https://mail.example.com" ]] || fail "web app URL is normalized to https"
+grep -Fq 'user_pref("zen.view.compact.enable-at-startup", true);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile starts in compact mode"
+if grep -Fq 'omazen.webapp.hosts' "$MAIL_APP/profile/user.js"; then
+  fail "an unthemed web app must not opt into page theming"
+fi
+assert_absent "$MAIL_APP/profile/chrome"
+grep -Fxq 'X-Omazen-Webapp=mail' "$MAIL_LAUNCHER" || fail "web app launcher carries the ownership marker"
+grep -Fxq 'StartupWMClass=omazen-webapp-mail' "$MAIL_LAUNCHER" || fail "web app launcher has its own window class"
+grep -Eq '^Exec=".*/omazen" webapp launch mail$' "$MAIL_LAUNCHER" || fail "web app launcher starts omazen webapp launch"
+run_omazen webapp list | grep -Eq '^Mail +https://mail\.example\.com$' || fail "webapp list shows the app"
+if run_omazen webapp install "Mail" "other.example.com" zen-browser >/dev/null 2>&1; then
+  fail "duplicate web app names are rejected"
+fi
+for bad_url in "javascript:alert(1)" "file:///etc/passwd" "https://exa mple.com"; do
+  if run_omazen webapp install "Bad" "$bad_url" zen-browser >/dev/null 2>&1; then
+    fail "unsafe web app URL accepted: $bad_url"
+  fi
+done
+if run_omazen webapp install "a/b" "example.com" zen-browser >/dev/null 2>&1; then
+  fail "web app names with slashes are rejected"
+fi
+assert_absent "$FAKE_WEBAPPS/bad"
+assert_absent "$FAKE_APPLICATIONS/omazen-webapp-bad.desktop"
+
+run_omazen webapp install --theme --invert "Docs Site" "https://docs.example.com/start" zen-browser >/dev/null
+DOCS_APP="$FAKE_WEBAPPS/docs-site"
+DOCS_PROFILE=$(cd -- "$DOCS_APP/profile" && pwd -P)
+grep -Fq 'user_pref("omazen.webapp.hosts", "docs.example.com");' "$DOCS_PROFILE/user.js" || \
+  fail "themed web app records its host"
+grep -Fq 'user_pref("omazen.webapp.invert", true);' "$DOCS_PROFILE/user.js" || \
+  fail "themed web app records inversion"
+grep -Fq 'user_pref("userChromeJS.firstRunShown", true);' "$DOCS_PROFILE/user.js" || \
+  fail "themed web app hides the fx-autoconfig first-run bar"
+assert_file "$DOCS_PROFILE/chrome/utils/boot.sys.mjs"
+assert_file "$DOCS_PROFILE/chrome/JS/omazen-bridge.uc.js"
+assert_file "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs"
+grep -Fq "$DOCS_PROFILE/chrome/JS/omazen-bridge.uc.js|" "$FAKE_STATE/owned/profile-files" || \
+  fail "themed web app runtime is owned by Omazen"
+run_omazen webapp list | grep -Eq '^Docs Site +theme,invert +https://docs\.example\.com/start$' || \
+  fail "webapp list marks themed apps"
+doctor_webapps=$(run_omazen doctor 2>&1 || true)
+grep -Fq "fx-autoconfig profile runtime: $DOCS_PROFILE" <<<"$doctor_webapps" || \
+  fail "doctor checks the themed web app profile"
+grep -Fq 'Zen web app: Docs Site (Omarchy theme)' <<<"$doctor_webapps" || fail "doctor lists web apps"
+grep -Fq 'Omarchy menu offers Zen web apps' <<<"$doctor_webapps" || fail "doctor checks the menu actions"
+rm -f "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs" "$MAIL_LAUNCHER"
+run_omazen setup >/dev/null
+assert_file "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs"
+assert_file "$MAIL_LAUNCHER"
+run_omazen webapp remove "Docs Site" >/dev/null
+assert_absent "$DOCS_APP"
+assert_absent "$FAKE_APPLICATIONS/omazen-webapp-docs-site.desktop"
+if grep -Fq "$DOCS_PROFILE" "$FAKE_STATE/owned/profile-files"; then
+  fail "removing a web app kept its owned runtime records"
+fi
+if run_omazen webapp remove "Nope" >/dev/null 2>&1; then
+  fail "removing an unknown web app succeeded"
+fi
+pass "web apps get isolated profiles and only themed ones receive the Omazen runtime"
 
 cat >"$FAKE_ZEN/defaults/pref/omazen-prefs.js" <<'EOF'
 /* SPDX-License-Identifier: GPL-3.0-only */
@@ -919,6 +1140,14 @@ pass "setup rejects an unowned partial fx-autoconfig profile runtime"
 
 run_omazen uninstall >/dev/null
 assert_absent "$FAKE_PROFILE/chrome/JS/omazen-bridge.uc.js"
+assert_absent "$FAKE_APPLICATIONS/org.omazen.WebAppInstall.desktop"
+assert_absent "$FAKE_APPLICATIONS/org.omazen.WebAppRemove.desktop"
+assert_absent "$MAIL_LAUNCHER"
+assert_file "$MAIL_APP/profile/user.js"
+if grep -Fq 'omazen web apps' "$FAKE_MENU"; then
+  fail "uninstall left the web app menu block"
+fi
+grep -Fq '"personal.notes"' "$FAKE_MENU" || fail "uninstall kept user menu entries"
 assert_absent "$FAKE_PROFILE/chrome/JS/Omazen/OmazenWatcher.sys.mjs"
 assert_absent "$FAKE_STATE/bridge.log.1"
 assert_absent "$FAKE_ZEN/defaults/pref/omazen-prefs.js"

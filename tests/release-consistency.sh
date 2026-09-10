@@ -30,6 +30,7 @@ grep -Fq -- "/$CONTENT_RUNTIME\";" "$BRIDGE" || fail "bridge content stylesheet 
 grep -Fq -- "/$CONTENT_RUNTIME\";" "$CHILD" || fail "child actor stylesheet URI"
 grep -Fq -- 'Omazen/OmazenPalette.sys.mjs' "$BRIDGE" || fail "bridge shared palette module"
 grep -Fq -- 'Omazen/OmazenWatcher.sys.mjs' "$BRIDGE" || fail "bridge shared watcher module"
+grep -Fq -- 'Omazen/OmazenBoosts.sys.mjs' "$BRIDGE" || fail "bridge web app boosts module"
 grep -Fq -- 'from "./OmazenPalette.sys.mjs";' "$CHILD" || fail "child shared palette module"
 [[ -f $PROJECT_ROOT/zen/Omazen/$CHROME_SOURCE ]] || fail "missing canonical chrome stylesheet"
 [[ -f $PROJECT_ROOT/zen/Omazen/$CONTENT_SOURCE ]] || fail "missing canonical content stylesheet"

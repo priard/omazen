@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name           Omazen privileged palette bridge
 // @description    Applies a validated local Omazen palette to Zen chrome and internal pages.
-// @version        1.6.1
+// @version        1.7.0
 // @author         Omazen contributors
 // @include        main
 // @WindowActor    Omazen
@@ -23,9 +23,9 @@
   const LOG_ARCHIVE_LEAF = "bridge.log.1";
   const STYLE_ID = "omazen-chrome-style";
   const CONTENT_STYLE_ID = "omazen-content-style";
-  const VERSION = "1.6.1";
-  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.6.1.css";
-  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.6.1.css";
+  const VERSION = "1.7.0";
+  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.7.0.css";
+  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.7.0.css";
   const {
     COLOR_KEYS,
     actorPayload,
@@ -38,6 +38,9 @@
   );
   const { subscribePaletteWatcher } = ChromeUtils.importESModule(
     "chrome://userscripts/content/Omazen/OmazenWatcher.sys.mjs",
+  );
+  const { startWebAppBoosts } = ChromeUtils.importESModule(
+    "chrome://userscripts/content/Omazen/OmazenBoosts.sys.mjs",
   );
   const SPOTLIGHT_URI = "chrome://browser/content/spotlight.html";
   const COMMON_DIALOG_URI = "chrome://global/content/commonDialog.xhtml";
@@ -84,6 +87,21 @@
   }
 
   const PROFILE_ID = stableProfileId();
+
+  // Page theming is opt-in and limited to profiles created by
+  // `omazen webapp install --theme`; startWebAppBoosts() returns null for every
+  // other profile, including all regular Zen profiles.
+  let webAppBoosts = null;
+  try {
+    webAppBoosts = startWebAppBoosts({
+      profileDir: () => PathUtils.profileDir,
+      env: name => Services.env.get(name),
+      home: Services.dirsvc.get("Home", Ci.nsIFile).path,
+      log: message => appendLog("INFO", `${message} profile=${PROFILE_ID}`),
+    });
+  } catch (error) {
+    appendLog("WARN", `web app boosts unavailable: ${error}`);
+  }
 
   function stateDirectory() {
     const configured = Services.env.get("XDG_STATE_HOME");
@@ -355,6 +373,7 @@
 
   function writePalettePrefs(palette, enabled) {
     Services.prefs.setBoolPref("omazen.enabled", enabled);
+    webAppBoosts?.update(palette, enabled);
     if (!palette) return;
     Services.prefs.setStringPref("omazen.palette.mode", palette.mode);
     for (const key of COLOR_KEYS) {

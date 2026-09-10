@@ -34,9 +34,10 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.6.1` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.7.0` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
-the qualified command and rollback contracts. Canonical stylesheet sources
+the qualified command and rollback contracts, and adds
+[Zen web apps](#zen-web-apps) with optional theme-following pages. Canonical stylesheet sources
 remain unversioned in the repository and are installed under release-versioned
 names for `chrome://` cache busting. The shared event-driven watcher, automatic
 polling fallback and external palette-provider compatibility remain intact. The
@@ -84,7 +85,9 @@ provider owns triggering `omazen sync` after palette changes. This is an
 integration interface, not an expansion of Omazen's official support scope.
 
 The installer writes only Omazen-owned files and never edits
-`userChrome.css`, `userContent.css` or `user.js`.
+`userChrome.css`, `userContent.css` or `user.js` of your Zen profiles. The one
+shared file it touches is the Omarchy menu extension, where it keeps its web app
+entries between its own marker comments.
 
 ## Commands
 
@@ -97,6 +100,9 @@ omazen doctor [--json]
 omazen disable
 omazen enable
 omazen uninstall
+omazen webapp install [--theme [--invert]] [name url [icon]]
+omazen webapp remove [name]
+omazen webapp list
 ```
 
 - `setup` installs or repairs the integration idempotently.
@@ -107,10 +113,39 @@ omazen uninstall
   for bug reports and automation.
 - `disable` and `enable` update open windows without restarting Zen.
 - `uninstall` removes only unchanged files recorded as Omazen-owned.
+- `webapp` manages Zen web apps; see [Zen web apps](#zen-web-apps).
 
 The event-driven fast path uses `/usr/bin/inotifywait` from `inotify-tools`.
 When it is unavailable or exits unexpectedly, the bridge automatically returns
 to the previous 250 ms polling behavior.
+
+## Zen web apps
+
+Alongside Omarchy's Chromium-based web apps, Omazen creates Zen web apps. Each
+one opens a single site in its own isolated Zen profile, starts in compact mode
+without the sidebar or toolbar, and gets its own window class, so the app
+launcher, alt-tab and Hyprland rules treat it as a separate application.
+Starting a web app that is already open focuses its window.
+
+`omazen setup` adds **Install Zen Web App** and **Remove Zen Web App** to the app
+launcher and the matching entries under Install and Remove in the Omarchy menu.
+Without arguments, `install` asks for the name and URL in a terminal and
+`remove` offers a picker. The icon may be a URL, an image file or an icon name;
+by default the site's own icon is fetched.
+
+`--theme` is optional. It installs Omazen's runtime into that web app's profile
+and tints its pages with the active Omarchy theme through a Zen boost, following
+theme switches live. It is a tint in the theme's accent rather than a repaint
+with the palette's exact colors. `--invert` marks a light site: while the theme
+is dark the page is inverted, images excepted, and a light theme restores it.
+Only profiles created this way can be themed; regular Zen profiles and their
+boosts are never touched. The [compatibility guide](docs/compatibility.md)
+lists the limits.
+
+Web apps live in `~/.local/share/omazen-webapps/`. `omazen webapp remove`
+deletes a web app together with its profile. `omazen uninstall` removes the
+launchers and menu entries but keeps the profiles and their sign-ins; a later
+setup restores the launchers.
 
 ## Compatibility
 

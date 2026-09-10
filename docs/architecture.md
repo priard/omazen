@@ -178,6 +178,53 @@ them to release-versioned profile paths. This keeps contributions applicable
 across releases without giving up the `chrome://` cache busting required at
 runtime.
 
+## Zen web apps
+
+`omazen webapp` creates web apps alongside Omarchy's Chromium-based ones. Each
+web app lives in `~/.local/share/omazen-webapps/<id>/` (`$XDG_DATA_HOME` when
+set): plain-text `name`, `url` and `icon` files, optional `hosts` and `invert`
+markers, and a dedicated Zen `profile`. That profile's `user.js` starts Zen in
+compact mode with the tab bar and toolbar hidden and no hover reveal, and skips
+first-run, update and default-browser prompts. The launcher
+`~/.local/share/applications/omazen-webapp-<id>.desktop` carries an
+`X-Omazen-Webapp` ownership marker and runs `omazen webapp launch <id>`, which
+focuses the web app's window when Hyprland already shows one and otherwise
+starts `zen-bin --profile <profile> --name omazen-webapp-<id> <url>` through
+`uwsm-app`. The `--name` value becomes the Wayland class, so each web app is a
+separate application for the launcher, alt-tab and window rules. Zen's kiosk
+mode is not used: it keeps Zen's sidebar, requests real fullscreen and disables
+context menus.
+
+`--theme` installs the regular profile runtime into that one profile and records
+the hosts the web app serves in `omazen.webapp.hosts`. Themed web app profiles
+count as Omazen profiles, so setup upgrades their runtime, doctor checks it and
+uninstall removes it. In such a profile the bridge starts
+`OmazenBoosts.sys.mjs`, which turns each applied palette into a Zen boost per
+recorded host through Zen's own boosts manager, so open tabs update without a
+reload. Zen notifies boost updates synchronously from inside its own save, so
+the driver reacts only through a short timer and settles into a no-op once the
+boost matches the palette; a save attempted before Zen has loaded its boost
+store is retried when that load finishes. The bridge refuses to start the
+driver unless the profile directory lies inside the web apps directory, so a
+copied preference cannot theme a regular profile.
+
+`omazen setup` also installs `org.omazen.WebAppInstall.desktop` and
+`org.omazen.WebAppRemove.desktop` and adds Install and Remove entries to
+`~/.config/omarchy/extensions/omarchy-menu.jsonc`, between
+`// >>> omazen web apps` and `// <<< omazen web apps` markers placed right after
+the object's opening brace. Omarchy strips whole-line comments and trailing
+commas before parsing, so the block never has to touch the user's entries.
+Setup also rewrites the launcher of every existing web app, which restores them
+after a reinstall.
+
 ## Installation ownership
 
 Omazen records only files it created in `~/.local/state/omazen/owned/`, including an expected SHA-256. Upgrades back up owned files before replacement. Uninstall deletes a recorded file only when its current hash still matches the recorded hash; modified files are retained with a warning. Identical pre-existing files are reused but not claimed.
+
+The web app launchers installed by setup are recorded in the separate
+`integration-files` manifest. The Omarchy menu block is owned by its marker
+comments rather than by a hash, because the file around it belongs to the user;
+uninstall removes the block and leaves the rest of the file as it was. Web app
+launchers are recognised by their ownership marker. Uninstall removes them, but
+keeps the web app profiles, which hold the user's sign-ins and site data; a
+later setup restores their launchers.

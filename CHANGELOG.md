@@ -4,6 +4,38 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-10
+
+### Added
+
+- Added `omazen webapp install|remove|list|launch`: Zen web apps kept
+  alongside Omarchy's Chromium-based ones. Each opens one site in its own
+  isolated Zen profile, starts in compact mode without the sidebar or toolbar,
+  and gets its own Wayland class, so the launcher, alt-tab and Hyprland rules
+  treat it as a separate application. Launching a running web app focuses it.
+- Added opt-in page theming for those web apps: `--theme` tints a web app's
+  pages with the active Omarchy theme through a Zen boost that follows theme
+  switches live, and `--invert` marks a light site to invert while the theme
+  is dark. Only profiles created this way can be themed; regular Zen profiles
+  never are.
+- `omazen setup` now adds Install and Remove Zen Web App entries to the app
+  launcher and to the Omarchy menu, inside a marked block of the user's menu
+  extension that `omazen uninstall` removes again. Setup also upgrades the
+  runtime of themed web app profiles and restores web app launchers; uninstall
+  removes them while keeping the web app profiles.
+
+### Fixed
+
+- Painted hovered folder rows with the accent their label foreground already
+  assumes. Folder rows are not toolbarbuttons, so they kept Zen's 7% wash of
+  `--zen-branding-bg-reverse` and light themes showed near-white text on a
+  near-white row. Live-folder labels, whose gradient text fill ignores
+  `color`, now take the palette foreground while hovered.
+- Kept the tab sublabel readable on accent surfaces by replacing its fixed
+  50% opacity with a mix toward the surface, only while it is shown.
+- Mapped the URL-bar result rows, title separator, URL, hover and selected
+  states to the palette instead of Zen's literal `light-dark()` colors.
+
 ## [1.6.1] - 2026-09-05
 
 ### Added
