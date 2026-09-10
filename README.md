@@ -151,7 +151,7 @@ offers a picker. The icon may be a URL, an image file or an icon name; by
 default the site's own icon is fetched.
 
 ```bash
-omazen webapp install --theme "Ojto" https://ojto.pl
+omazen webapp install --theme "Messenger" https://messenger.com
 omazen webapp install --theme --invert "Wikipedia" https://wikipedia.org
 omazen webapp install --theme --opaque "Mail" https://mail.example.com
 ```
