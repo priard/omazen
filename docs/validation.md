@@ -1,5 +1,51 @@
 # Release validation report
 
+## 1.7.0 Zen web apps
+
+Date: 2026-09-10
+Release: Omazen `1.7.0`
+Environment: Omarchy `4.0.2-1` (Quattro), native `zen-browser-bin 1.22b-1`
+(Firefox `155.0.1`).
+
+Automated checks passed: Rust formatting, Clippy with warnings denied, 13 unit
+tests (seven cover web apps: argument parsing, names and identifiers, URL and
+host validation, desktop-entry escaping, icon sources, the Hyprland client
+lookup, and inserting, replacing and removing the Omarchy menu block), the
+locked release build, syntax and release consistency, the pinned shellcheck and
+actionlint, the three CLI contracts, the lifecycle suite with 24 groups, the
+JavaScript suites including the new web app boost driver, and palette contrast
+with the seven documented advisory warning groups. The read-only contract was
+regenerated: help lists the `webapp` command, and doctor reports the new
+`OmazenBoosts.sys.mjs` profile module and, once setup has installed it, the web
+app integration. The two new lifecycle groups cover the launcher and menu
+integration (user entries, comments, permissions and a symlinked menu file are
+preserved; repeated setup is byte-identical) and the web app lifecycle (unsafe
+URLs and names are rejected, only themed web apps receive the runtime, doctor
+checks their profiles, setup repairs them and restores launchers, removal
+forgets their owned files, and uninstall keeps their profiles). The local
+toolchain was rustc `1.98.1`, so the steps of `tests/rust.sh` were run directly
+instead of through its exact `1.98.0` version check.
+
+The rendered-pixel smoke test passed. The compositor-backed extension loaded
+the 1.7.0 bridge with the new module in a disposable profile
+(`BRIDGE_LOADED`, `PALETTE_APPLIED`, `CHROME_CSS_APPLIED`, `WATCHER_READY`, no
+warnings or errors, and no boost activity in that regular profile), but could
+not capture screenshots: the only monitor was powered off, so `grim` never
+received a frame. It must be rerun with the display on.
+
+Live deployment over 1.6.1 upgraded two regular profiles and one themed web app
+profile, added both launchers and the menu block, and left the user's existing
+menu entry parseable under Omarchy's rules. A themed web app for
+`wikipedia.org` started through its launcher command under the class
+`omazen-webapp-wikipedia`; the bridge logged `WEBAPP_BOOST_APPLIED` for
+`wikipedia.org` and `www.wikipedia.org` with the light palette's accent and
+inversion off, and the decoded boost store held the active Omazen-owned boost
+for both hosts with hue, saturation and brightness matching that accent.
+Launching it again focused the existing window, and closing it through
+Hyprland ended Zen without leaving its watcher running. `omazen doctor` then
+reported zero failures and zero warnings; a long-running Zen window keeps the
+1.6.1 bridge until it is restarted.
+
 ## 1.5.0 Rust CLI release
 
 Date: 2026-08-27
