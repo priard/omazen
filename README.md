@@ -34,10 +34,11 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.7.0` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.8.0` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
-the qualified command and rollback contracts, and adds
-[Zen web apps](#zen-web-apps) with optional theme-following pages. Canonical stylesheet sources
+the qualified command and rollback contracts. It installs with one command and
+includes [Zen web apps](#zen-web-apps) whose pages can take the theme's own
+colors on a translucent, blurred window. Canonical stylesheet sources
 remain unversioned in the repository and are installed under release-versioned
 names for `chrome://` cache busting. The shared event-driven watcher, automatic
 polling fallback and external palette-provider compatibility remain intact. The
@@ -52,7 +53,20 @@ unsupported Zen packaging formats are listed in the
 
 ## Install
 
-Review [the security model](docs/security.md), then run:
+On Omarchy 4 (Quattro), one command does everything: it downloads the latest
+release, checks it against its SHA-256 checksum, installs whatever is missing
+(`zen-browser-bin`, `inotify-tools`, `gum`) and runs the installer, which also
+sets up [Zen web apps](#zen-web-apps) with their launcher and Omarchy menu
+entries:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/priard/omazen/main/bootstrap.sh | bash
+```
+
+Omazen installs a privileged loader into Zen, so read
+[the security model](docs/security.md) and, if you like,
+[`bootstrap.sh`](bootstrap.sh) before running it. `OMAZEN_RELEASE=vX.Y.Z` picks
+a specific release. From a checkout, run the installer directly:
 
 ```bash
 ./install.sh
@@ -100,7 +114,7 @@ omazen doctor [--json]
 omazen disable
 omazen enable
 omazen uninstall
-omazen webapp install [--theme [--invert]] [name url [icon]]
+omazen webapp install [--theme [--invert] [--opaque]] [name url [icon]]
 omazen webapp remove [name]
 omazen webapp list
 ```
@@ -123,23 +137,48 @@ to the previous 250 ms polling behavior.
 
 Alongside Omarchy's Chromium-based web apps, Omazen creates Zen web apps. Each
 one opens a single site in its own isolated Zen profile, starts in compact mode
-without the sidebar or toolbar, and gets its own window class, so the app
+without the sidebar or toolbar, frame, rounded corners or translation pop-up,
+and gets its own window class, so the app
 launcher, alt-tab and Hyprland rules treat it as a separate application.
 Starting a web app that is already open focuses its window.
 
-`omazen setup` adds **Install Zen Web App** and **Remove Zen Web App** to the app
-launcher and the matching entries under Install and Remove in the Omarchy menu.
-Without arguments, `install` asks for the name and URL in a terminal and
-`remove` offers a picker. The icon may be a URL, an image file or an icon name;
-by default the site's own icon is fetched.
+The installer (and `omazen setup`) adds **Install Zen Web App** and **Remove Zen
+Web App** to the app launcher and the matching entries under Install and Remove
+in the Omarchy menu. Without arguments, `install` asks in a terminal for the
+name and URL, whether to match the Omarchy theme and, if so, whether the site is
+light and whether the window should be translucent (the default). `remove`
+offers a picker. The icon may be a URL, an image file or an icon name; by
+default the site's own icon is fetched.
 
-`--theme` is optional. It installs Omazen's runtime into that web app's profile
-and tints its pages with the active Omarchy theme through a Zen boost, following
-theme switches live. It is a tint in the theme's accent rather than a repaint
-with the palette's exact colors. `--invert` marks a light site: while the theme
-is dark the page is inverted, images excepted, and a light theme restores it.
-Only profiles created this way can be themed; regular Zen profiles and their
-boosts are never touched. The [compatibility guide](docs/compatibility.md)
+```bash
+omazen webapp install --theme "Ojto" https://ojto.pl
+omazen webapp install --theme --invert "Wikipedia" https://wikipedia.org
+omazen webapp install --theme --opaque "Mail" https://mail.example.com
+```
+
+### Theme-following web apps
+
+With `--theme`, a web app's pages take the colors of the active Omarchy theme
+and follow theme switches live:
+
+- **Colors.** A Zen boost is solved from the palette, so a page's white lands on
+  the theme's background (the color of Zen's own sidebar and of the terminals)
+  and its text on the theme's foreground. Other colors keep their lightness and
+  lean toward those hues: it is a tint, not a repaint, so buttons and links
+  lose some saturation.
+- **Glass.** The window is a translucent layer of the theme background over
+  Hyprland's blur of the wallpaper, and the page's own background is cleared
+  so its text stays sharp on it. `--opaque`, or answering no at the prompt,
+  keeps the window solid.
+- **Light and dark.** Pages get the theme's light or dark scheme, so a site
+  with its own dark mode switches by itself. `--invert` is for light sites
+  without one: under a dark theme the page is inverted, images excepted.
+
+Parts of a page that paint their own background keep it, tinted. Under a dark
+theme only inverted pages sit on the glass; a site shown as is keeps its own
+background, because its text may be dark. `--theme` installs Omazen's runtime
+into that one web app's profile; regular Zen profiles and their boosts are
+never touched. The [compatibility guide](docs/compatibility.md)
 lists the limits.
 
 Web apps live in `~/.local/share/omazen-webapps/`. `omazen webapp remove`

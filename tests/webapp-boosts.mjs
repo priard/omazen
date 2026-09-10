@@ -5,39 +5,119 @@ import assert from "node:assert/strict";
 
 const {
   BOOST_NAME,
-  DEFAULT_STRENGTH,
+  GLASS_PAGE_CSS,
   boostDataForPalette,
   createWebAppBoostDriver,
   hexToHsl,
+  hexToRgb,
+  invertLightness,
   isInsideDirectory,
+  rgbToOklab,
   parseHosts,
   webAppsRoot,
 } = await import(new URL("../zen/Omazen/OmazenBoosts.sys.mjs", import.meta.url));
 
-const light = { mode: "light", accent: "#56949f" };
-const dark = { mode: "dark", accent: "#7aa2f7" };
+const light = { mode: "light", accent: "#17769e", background: "#fceeea", foreground: "#3c383e" };
+const dark = { mode: "dark", accent: "#7aa2f7", background: "#1a1b26", foreground: "#c0caf5" };
 
-// Accent mapping inverts ZenBoostsChild's hsl(dotAngleDeg, 1 - saturation, 0.1 + 0.9 * brightness).
+// A port of what Zen does with the boost data: ZenBoostsChild builds the
+// accent, and nsZenBoostsBackend.cpp filters (and optionally inverts) colors.
+function zenRender(data, rgb) {
+  const hueToRgb = (p, q, t) => {
+    t = t < 0 ? t + 1 : t > 1 ? t - 1 : t;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    return t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
+  };
+  const [h, s, l] = [data.dotAngleDeg / 360, 1 - data.saturation, 0.1 + 0.9 * data.brightness];
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const accentRgb = s === 0 ? [l, l, l].map(v => Math.round(v * 255))
+    : [h + 1 / 3, h, h - 1 / 3].map(t => Math.round(hueToRgb(2 * l - q, q, t) * 255));
+  const blend = (((1 - data.contrast) * 255) << 0) / 255;
+  const accent = rgbToOklab(accentRgb);
+  const turn = (a, b, angle) => [a * Math.cos(angle) - b * Math.sin(angle), a * Math.sin(angle) + b * Math.cos(angle)];
+  const [compA, compB] = turn(accent.a, accent.b, (data.secondaryDotAngleDegDelta * Math.PI) / 180);
+  const original = rgbToOklab(rgb);
+  const halfWidth = Math.min(0.5, Math.max(0.05, 0.5 - blend * 0.45));
+  let t = Math.min(1, Math.max(0, (original.L - (0.5 - halfWidth)) / (2 * halfWidth)));
+  t = t * t * (3 - 2 * t);
+  const delta = accent.L - original.L;
+  const [a, b] = turn(
+    original.a + (accent.a + (compA - accent.a) * t - original.a) * blend,
+    original.b + (accent.b + (compB - accent.b) * t - original.b) * blend,
+    (delta > 0 ? -1 : 1) * blend * blend * 0.25,
+  );
+  const L = original.L + delta * blend * blend * 0.5;
+  const lms = [
+    L + 0.3963377774 * a + 0.2158037573 * b,
+    L - 0.1055613458 * a - 0.0638541728 * b,
+    L - 0.0894841775 * a - 1.291485548 * b,
+  ].map(v => v ** 3);
+  let out = [
+    4.0767416621 * lms[0] - 3.3077115913 * lms[1] + 0.2309699292 * lms[2],
+    -1.2684380046 * lms[0] + 2.6097574011 * lms[1] - 0.3413193965 * lms[2],
+    -0.0041960863 * lms[0] - 0.7034186147 * lms[1] + 1.707614701 * lms[2],
+  ].map(v => {
+    const c = Math.max(0, v);
+    const srgb = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+    return Math.min(255, Math.max(0, Math.floor(srgb * 255 + 0.5)));
+  });
+  if (data.smartInvert) {
+    out = invertLightness(out);
+    if (((out[0] * 54 + out[1] * 183 + out[2] * 19) >> 8) <= 127) {
+      out = out.map(c => Math.floor(15 + (c * 240) / 255));
+    }
+  }
+  return out;
+}
+const distance = (x, y) => {
+  const [p, q] = [rgbToOklab(x), rgbToOklab(y)];
+  return Math.hypot(p.L - q.L, p.a - q.a, p.b - q.b);
+};
+
+// The boost is solved from the palette: a page's white becomes the theme
+// background and its text the foreground, also through Zen's inversion.
 {
-  const { h, s, l } = hexToHsl(light.accent);
   const data = boostDataForPalette(light);
   assert.equal(data.boostName, BOOST_NAME);
   assert.equal(data.enableColorBoost, true);
   assert.equal(data.autoTheme, false);
   assert.equal(data.changeWasMade, true);
-  assert.ok(Math.abs(data.dotAngleDeg - h) < 0.01, "hue maps to dotAngleDeg");
-  assert.ok(Math.abs(1 - data.saturation - s) < 0.001, "saturation is stored inverted");
-  assert.ok(Math.abs(0.1 + 0.9 * data.brightness - l) < 0.002, "brightness reproduces lightness");
-  assert.equal(data.contrast, Math.round((1 - DEFAULT_STRENGTH) * 1000) / 1000);
-  assert.equal(data.secondaryDotAngleDegDelta, 0);
   assert.equal(data.smartInvert, false);
+  assert.equal(data.customCSS, GLASS_PAGE_CSS, "the page root is cleared for the glass window");
+  assert.ok(distance(zenRender(data, [255, 255, 255]), hexToRgb(light.background)) < 0.005,
+    "white pages take the theme background");
+  assert.ok(distance(zenRender(data, [34, 34, 34]), hexToRgb(light.foreground)) < 0.02,
+    "text takes the theme foreground");
 }
+{
+  const data = boostDataForPalette(dark, { invert: true });
+  assert.ok(distance(zenRender(data, [255, 255, 255]), hexToRgb(dark.background)) < 0.005,
+    "an inverted white page takes the dark theme background");
+  assert.ok(distance(zenRender(data, [34, 34, 34]), hexToRgb(dark.foreground)) < 0.08,
+    "inverted text stays near the dark theme foreground");
+}
+{
+  const data = boostDataForPalette(dark);
+  assert.ok(distance(zenRender(data, [30, 30, 30]), hexToRgb(dark.background)) < 0.01,
+    "a dark site's background takes the dark theme background");
+  assert.ok(distance(zenRender(data, [232, 232, 232]), hexToRgb(dark.foreground)) < 0.08,
+    "a dark site's text stays near the dark theme foreground");
+}
+for (const data of [boostDataForPalette(light), boostDataForPalette(dark, { invert: true }), boostDataForPalette(dark)]) {
+  for (const key of ["saturation", "brightness", "contrast"]) {
+    assert.ok(data[key] >= 0 && data[key] <= 1, `${key} stays within Zen's range`);
+  }
+  assert.ok(Math.abs(data.secondaryDotAngleDegDelta) <= 180);
+}
+assert.equal(boostDataForPalette(dark, { invert: true }).customCSS, GLASS_PAGE_CSS, "inverted pages read on dark glass");
+assert.equal(boostDataForPalette(dark).customCSS, "", "a site shown as is under a dark theme keeps its background");
+assert.equal(boostDataForPalette(light, { glass: false }).customCSS, "", "an opaque window keeps every page background");
+assert.equal(boostDataForPalette(dark, { invert: true, glass: false }).customCSS, "");
 assert.equal(boostDataForPalette(dark, { invert: true }).smartInvert, true, "light sites invert in dark themes");
 assert.equal(boostDataForPalette(light, { invert: true }).smartInvert, false, "light themes restore the page");
 assert.equal(boostDataForPalette(dark).smartInvert, false, "sites are not inverted unless marked light");
-assert.equal(boostDataForPalette(light, { strength: 2 }).contrast, 0, "strength is clamped");
-assert.equal(boostDataForPalette(light, { strength: Number.NaN }).contrast, 0.45, "invalid strength uses the default");
-assert.equal(boostDataForPalette({ mode: "dark", accent: "red" }), null, "invalid accents never reach Zen");
+assert.equal(boostDataForPalette({ ...dark, background: "red" }), null, "invalid colors never reach Zen");
 assert.equal(boostDataForPalette(null), null);
 assert.deepEqual(hexToHsl("#808080"), { h: 0, s: 0, l: 128 / 255 });
 
@@ -117,7 +197,7 @@ function createHarness({ hosts = ["mail.example.com"], invert = false, ready = t
   const timers = new Map();
   let nextTimer = 1;
   const logs = [];
-  const prefs = { hosts, invert, strength: Number.NaN };
+  const prefs = { hosts, invert };
   const driver = createWebAppBoostDriver({
     manager: fake.manager,
     readPrefs: () => ({ ...prefs }),

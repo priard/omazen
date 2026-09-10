@@ -4,6 +4,50 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-10
+
+### Added
+
+- `bootstrap.sh` installs Omazen with one command on Omarchy: it downloads the
+  latest release, verifies its SHA-256 checksum, installs missing packages
+  (`zen-browser-bin`, `inotify-tools`, `gum`) and runs the installer, which
+  also sets up Zen web apps.
+- `omazen webapp install --opaque` keeps a themed web app's window solid, and
+  the interactive installer asks whether the window should be translucent
+  (the default).
+
+- Web apps created with `--theme` are now glass: the window is a translucent
+  layer of the theme background over Hyprland's blur of the wallpaper, and the
+  page's own background is cleared so its text stays sharp on it. Under a
+  dark theme this applies to pages marked `--invert`; a site shown as is keeps
+  its background, since its text may be dark.
+- Themed web apps pass the theme's light or dark scheme to their pages, so a
+  site with its own dark mode follows theme switches. Pages used to get the
+  desktop's scheme regardless of the Omarchy theme. Web apps marked
+  `--invert` keep the light scheme, which the inversion then darkens.
+
+### Changed
+
+- Themed web apps now take the theme's actual colors. The boost used to tint
+  pages toward the theme's accent, so a blue-accented theme turned pages blue
+  whatever its background. It is now solved from the palette so that a page's
+  white lands on the theme's background and its text on the foreground, and,
+  for inverted pages, on the colors Zen's inversion turns into them.
+- Web app windows now have square corners. Zen keeps a minimum radius on the
+  page that no preference removes, so each web app profile gets a
+  `userChrome.css` that `omazen setup` refreshes until the user takes it over.
+- Web apps no longer open Zen's translations panel on their own, which slid
+  the compact toolbar out over the page.
+
+- Web app windows no longer show Zen's content frame. The gap Zen leaves
+  around the page read as a rounded, shadowed card and, in compact mode, as a
+  panel edge along the left side; web app profiles now set
+  `zen.theme.content-element-separation` and `zen.theme.border-radius` to 0,
+  so the window border is the only frame. Regular Zen profiles are unchanged.
+- `omazen setup` now regenerates the preferences Omazen manages in each web
+  app profile, so existing web apps pick up such changes on their next start,
+  while preferences the user added are kept.
+
 ## [1.7.0] - 2026-09-10
 
 ### Added

@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name           Omazen privileged palette bridge
 // @description    Applies a validated local Omazen palette to Zen chrome and internal pages.
-// @version        1.7.0
+// @version        1.8.0
 // @author         Omazen contributors
 // @include        main
 // @WindowActor    Omazen
@@ -23,9 +23,9 @@
   const LOG_ARCHIVE_LEAF = "bridge.log.1";
   const STYLE_ID = "omazen-chrome-style";
   const CONTENT_STYLE_ID = "omazen-content-style";
-  const VERSION = "1.7.0";
-  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.7.0.css";
-  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.7.0.css";
+  const VERSION = "1.8.0";
+  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.8.0.css";
+  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.8.0.css";
   const {
     COLOR_KEYS,
     actorPayload,
@@ -101,6 +101,22 @@
     });
   } catch (error) {
     appendLog("WARN", `web app boosts unavailable: ${error}`);
+  }
+
+  // Marks a themed web app window for the glass and --invert rules of the
+  // chrome stylesheet; a window without a boost driver never carries them.
+  function setWebAppAttributes(root, enabled) {
+    if (!webAppBoosts) return;
+    const invert = Services.prefs.getBoolPref("omazen.webapp.invert", false);
+    const glass = Services.prefs.getBoolPref("omazen.webapp.glass", true);
+    for (const [name, on] of [
+      ["data-omazen-webapp", enabled],
+      ["data-omazen-webapp-invert", enabled && invert],
+      ["data-omazen-webapp-glass", enabled && glass],
+    ]) {
+      if (on) root.setAttribute(name, "true");
+      else root.removeAttribute(name);
+    }
   }
 
   function stateDirectory() {
@@ -531,6 +547,7 @@
     ensureChromeStyle();
     const root = document.documentElement;
     setRootPalette(root, palette, true);
+    setWebAppAttributes(root, true);
     currentPalette = palette;
     syncContentPaletteSheet(palette, true);
     writePalettePrefs(palette, true);
@@ -542,6 +559,7 @@
   function disablePalette() {
     const root = document.documentElement;
     setRootPalette(root, currentPalette, false);
+    setWebAppAttributes(root, false);
     syncContentPaletteSheet(currentPalette, false);
     writePalettePrefs(currentPalette, false);
     broadcastToInternalPages(currentPalette, false);
