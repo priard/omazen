@@ -208,6 +208,79 @@ pass "Omarchy 3 is rejected before setup changes"
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "palette mode mapping"
 grep -Fq '"background_dark": "#eeeeee"' "$FAKE_STATE/palette.json" || fail "palette background mapping"
 cp "$FAKE_COLORS" "$TEST_ROOT/full-colors.toml"
+# Legacy themes are resolved through Omarchy's own omarchy-theme-color. Replay
+# its output for the fixture below (recorded on Omarchy 4.0.2) so this group
+# also runs where Omarchy is not installed, such as CI; what is under test is
+# how Omazen reads the resolver's output.
+THEME_COLOR_BIN="$TEST_ROOT/theme-color-bin"
+mkdir -p "$THEME_COLOR_BIN"
+cat >"$THEME_COLOR_BIN/omarchy-theme-color" <<'RESOLVER'
+#!/bin/bash
+[[ $# == 3 && $1 == --file && -f $2 && $3 == --all ]] || exit 2
+printf '%s\n' "$*" >>"${0%/*}/calls"
+while read -r key value; do
+  printf '%s\t%s\n' "$key" "$value"
+done <<'COLORS'
+accent #85b34c
+active_border_color #496c1e
+background #fdf6ee
+bg #fdf6ee
+blue #5e8e28
+bright_blue #496c1e
+bright_cyan #4a6b4d
+bright_fg #22211d
+bright_foreground #22211d
+bright_green #1b2e1c
+bright_magenta #28463c
+bright_purple #28463c
+bright_red #e03c20
+bright_yellow #6b5237
+brown #45361f
+color0 #fdf6ee
+color1 #df2b0d
+color10 #1b2e1c
+color11 #6b5237
+color12 #496c1e
+color13 #28463c
+color14 #4a6b4d
+color15 #22211d
+color2 #29472a
+color3 #8a6c3e
+color4 #5e8e28
+color5 #28473f
+color6 #3d6b52
+color7 #22211d
+color8 #a09080
+color9 #e03c20
+cursor #22211d
+cyan #3d6b52
+dark_background #beb9b3
+dark_bg #beb9b3
+dark_fg #a09080
+dark_foreground #a09080
+darker_background #7f7b77
+darker_bg #7f7b77
+fg #22211d
+foreground #22211d
+green #29472a
+light_fg #22211d
+light_foreground #22211d
+lighter_background #fdf6ee
+lighter_bg #fdf6ee
+magenta #28473f
+mode light
+muted #a09080
+orange #8a6c3e
+purple #28473f
+red #df2b0d
+selection #85b34c
+selection_background #85b34c
+selection_foreground #fdf6ee
+theme_type light
+yellow #8a6c3e
+COLORS
+RESOLVER
+chmod +x "$THEME_COLOR_BIN/omarchy-theme-color"
 cat >"$FAKE_COLORS" <<'EOF'
 accent = "#85b34c"
 active_border_color = "#496c1e"
@@ -232,7 +305,9 @@ color13 = "#28463c"
 color14 = "#4a6b4d"
 color15 = "#22211d"
 EOF
-run_omazen sync >/dev/null
+PATH="$THEME_COLOR_BIN:$PATH" run_omazen sync >/dev/null
+grep -Fq -- "--file $FAKE_COLORS --all" "$THEME_COLOR_BIN/calls" || \
+  fail "legacy themes are resolved through omarchy-theme-color"
 grep -Fq '"mode": "light"' "$FAKE_STATE/palette.json" || fail "legacy theme mode resolution"
 grep -Fq '"background": "#fdf6ee"' "$FAKE_STATE/palette.json" || fail "legacy theme background resolution"
 grep -Fq '"background_dark": "#beb9b3"' "$FAKE_STATE/palette.json" || fail "legacy theme dark surface derivation"
