@@ -416,6 +416,34 @@ grep -Fq -- 'background-image: none !important;' \
 grep -Fq -- 'fill: var(--omazen-foreground) !important;' \
   <<< "$AUDIO_OVERLAY_RULE" || \
   fail "pinned tab audio badge glyph on the palette foreground"
+FOLDER_HOVER_SURFACE_RULE=$(sed -n \
+  '/zen-folder > \.tab-group-label-container:hover {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- '--tab-background-color-hover: var(--omazen-accent) !important;' \
+  <<< "$FOLDER_HOVER_SURFACE_RULE" || \
+  fail "folder hover paints the accent surface its foreground already assumes"
+grep -Fq -- '-webkit-text-fill-color: var(--omazen-accent-foreground) !important;' \
+  "$CHROME_CSS" || \
+  fail "live folder label escapes Zen's gradient text fill"
+SUBLABEL_RULE=$(sed -n \
+  '/\.tab-label-container \.zen-tab-sublabel {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'opacity: 1 !important;' <<< "$SUBLABEL_RULE" || \
+  fail "tab sublabel drops its fixed alpha on accent surfaces"
+grep -Fq -- '.urlbarView-title-separator::before {' "$CHROME_CSS" || \
+  fail "urlbar title separator follows the palette"
+URLBAR_ROW_RULE=$(sed -n \
+  '/\.urlbarView-row {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'color: var(--omazen-foreground) !important;' \
+  <<< "$URLBAR_ROW_RULE" || \
+  fail "urlbar result rows use the palette foreground"
+URLBAR_SELECTED_RULE=$(sed -n \
+  '/\.urlbarView-row\[selected\] {/,/^}/p' \
+  "$CHROME_CSS")
+grep -Fq -- 'background-color: var(--omazen-selection) !important;' \
+  <<< "$URLBAR_SELECTED_RULE" || \
+  fail "selected urlbar row uses the palette selection"
 if sed -n '/#zen-tabbox-wrapper {/,/^}/p' "$CHROME_CSS" | \
   grep -Fq -- 'box-shadow: none'; then
   fail "content wrapper must not suppress Zen elevation"
