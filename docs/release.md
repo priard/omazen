@@ -1,6 +1,6 @@
 # Release checklist
 
-Use this checklist from a clean `main` worktree for the local `1.6.1` release
+Use this checklist from a clean `main` worktree for the local `1.7.0` release
 candidate.
 
 ## Automated gate
@@ -32,13 +32,18 @@ SHA-256 sidecar. `install.sh` places that payload directly at `bin/omazen`.
 3. Reopen Zen once so fx-autoconfig loads the new bridge and shared module.
 4. Run `omazen doctor` and `omazen doctor --json`; require zero failures and
    zero warnings in both reports. Save the JSON report for the test record:
-   `omazen doctor --json > /tmp/omazen-1.6.1-doctor.json`.
-5. Confirm `bridge.log` contains `BRIDGE_LOADED version=1.6.1`,
+   `omazen doctor --json > /tmp/omazen-1.7.0-doctor.json`.
+5. Confirm `bridge.log` contains `BRIDGE_LOADED version=1.7.0`,
    `WATCHER_READY backend=inotify`, a successful `PALETTE_APPLIED`, and no
    current error or `WATCHER_FALLBACK` after watcher startup.
 6. Exercise dark/light theme changes, disable/enable, Settings, a common dialog,
    Library, Passwords, Print and Developer Tools without destructive actions.
-7. Confirm the normal update created one timestamped application backup.
+7. From the Omarchy menu, install a Zen web app with the Omarchy theme for a
+   light site, open it, switch between a dark and a light theme and confirm the
+   page follows without a reload and `bridge.log` records
+   `WEBAPP_BOOST_APPLIED`. Remove it from the menu and confirm its launcher and
+   profile are gone.
+8. Confirm the normal update created one timestamped application backup.
 
 Do not publish the tag if any live gate fails. The staged installer leaves the
 active application unchanged when pre-activation setup fails; the previous

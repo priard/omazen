@@ -20,9 +20,14 @@ chrome/JS/Omazen/OmazenParent.sys.mjs
 chrome/JS/Omazen/OmazenChild.sys.mjs
 chrome/JS/Omazen/OmazenPalette.sys.mjs
 chrome/JS/Omazen/OmazenWatcher.sys.mjs
-chrome/JS/Omazen/omazen-chrome-v1.6.1.css
-chrome/JS/Omazen/omazen-content-v1.6.1.css
+chrome/JS/Omazen/OmazenBoosts.sys.mjs
+chrome/JS/Omazen/omazen-chrome-v1.7.0.css
+chrome/JS/Omazen/omazen-content-v1.7.0.css
 ```
+
+The same files are installed into the dedicated profile of each web app created
+with `omazen webapp install --theme`. Web apps created without `--theme` receive
+no privileged files at all.
 
 Program-level files for the supported Zen package:
 
@@ -63,6 +68,25 @@ The first two may be reused from a compatible pre-existing fx-autoconfig install
   other user files. Paths below the configured home directory are rendered as
   `$HOME`. Users should still inspect the archive before sharing it.
 - Disable is live and uninstall is ownership/hash aware.
+- Page theming through Zen boosts is opt-in per web app. The bridge starts the
+  boost driver only when its own profile directory lies inside the Omazen web
+  apps directory *and* carries the `omazen.webapp.hosts` preference that
+  `omazen webapp install --theme` writes; every other profile, including all
+  regular Zen profiles, returns before the boost manager is even loaded. The
+  driver writes only numeric color parameters derived from the validated accent
+  and mode, into one boost per recorded host that it names and owns. Hosts must
+  be plain DNS names, and boosts the user created are left alone. Disabling
+  Omazen removes the owned boosts.
+- A web app's URL never appears in a launcher's `Exec` line or in the Omarchy
+  menu: launchers carry only the web app's identifier, and
+  `omazen webapp launch` passes the URL to Zen as a single argument. URLs must
+  be `http` or `https` with a plain host. `omazen webapp` runs its helpers
+  (`curl`, `gum`, `hyprctl`, Omarchy's menu and notification commands) with
+  fixed argument vectors, and a downloaded icon is kept only when its content
+  is an image.
+- `omazen setup` edits the user's Omarchy menu extension only between its own
+  marker comments, keeps the file's permissions, writes through a symlinked
+  file instead of replacing it, and never rewrites entries outside the block.
 - External palette-provider mode can skip the Omarchy hook, but it does not
   bypass palette validation, fixed paths, loader integrity, or ownership
   checks. The external provider must supply a trusted local `colors.toml` path

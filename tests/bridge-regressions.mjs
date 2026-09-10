@@ -367,6 +367,7 @@ const Ci = {
 let computedPrimary = "#112233";
 let watcherCallback = null;
 let watcherUnsubscribed = false;
+const webAppBoostStarts = [];
 
 const source = fs.readFileSync(new URL("../zen/omazen-bridge.uc.js", import.meta.url), "utf8");
 vm.runInNewContext(source, {
@@ -376,6 +377,16 @@ vm.runInNewContext(source, {
     importESModule(uri) {
       if (uri === "chrome://userscripts/content/Omazen/OmazenPalette.sys.mjs") {
         return paletteModule;
+      }
+      if (uri === "chrome://userscripts/content/Omazen/OmazenBoosts.sys.mjs") {
+        return {
+          // A regular Zen profile: page theming stays off and the profile
+          // directory is never resolved.
+          startWebAppBoosts(options) {
+            webAppBoostStarts.push(options);
+            return null;
+          },
+        };
       }
       if (uri === "chrome://userscripts/content/Omazen/OmazenWatcher.sys.mjs") {
         return {
@@ -564,5 +575,13 @@ unloadHandler();
 assert.equal(observers[0].disconnected, true, "unload should disconnect the observer");
 assert.equal(auxiliaryObserverRemoved, true, "unload should remove the auxiliary-window observer");
 assert.equal(watcherUnsubscribed, true, "unload should unsubscribe from the shared watcher");
+assert.equal(webAppBoostStarts.length, 1, "the bridge asks once whether this is a web app profile");
+assert.equal(
+  typeof webAppBoostStarts[0].profileDir,
+  "function",
+  "the profile directory is passed lazily, so regular profiles never resolve it",
+);
+assert.equal(typeof webAppBoostStarts[0].env, "function");
+assert.equal(webAppBoostStarts[0].home, "/home/test");
 assert.equal(intervals.size, 0, "unload should clear the palette poll timer");
 assert.equal(timeouts.size, 0, "unload should clear pending broadcasts and diagnostic probes");

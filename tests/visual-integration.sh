@@ -104,6 +104,7 @@ cp -- "$PROJECT_ROOT/zen/Omazen/OmazenParent.sys.mjs" \
   "$PROJECT_ROOT/zen/Omazen/OmazenChild.sys.mjs" \
   "$PROJECT_ROOT/zen/Omazen/OmazenPalette.sys.mjs" \
   "$PROJECT_ROOT/zen/Omazen/OmazenWatcher.sys.mjs" \
+  "$PROJECT_ROOT/zen/Omazen/OmazenBoosts.sys.mjs" \
   "$PROFILE/chrome/JS/Omazen/"
 cp -- "$PROJECT_ROOT/zen/Omazen/omazen-chrome.css" \
   "$PROFILE/chrome/JS/Omazen/omazen-chrome-v${RELEASE_VERSION}.css"

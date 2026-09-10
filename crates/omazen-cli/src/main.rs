@@ -13,6 +13,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
 
+mod webapp;
+
 const VERSION: &str = include_str!("../../../VERSION");
 
 #[derive(Debug)]
@@ -40,6 +42,11 @@ struct RuntimePaths {
     active_colors_file: PathBuf,
     data_dir: PathBuf,
     local_bin_dir: PathBuf,
+    integration_manifest: PathBuf,
+    webapps_dir: PathBuf,
+    applications_dir: PathBuf,
+    icons_dir: PathBuf,
+    menu_extension_file: PathBuf,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -106,6 +113,7 @@ fn run() -> Result<(), String> {
             require_no_arguments("uninstall", &trailing)?;
             uninstall()
         }
+        Some("webapp") => webapp::run(&trailing),
         Some("help" | "-h" | "--help") => {
             print_usage(false);
             Ok(())
@@ -138,6 +146,8 @@ fn print_usage(stderr: bool) {
         "                    Use --json for machine-readable output\n",
         "  report            Create a sanitized support report\n",
         "                    Use --output PATH for a custom archive location\n",
+        "  webapp <command>  Manage Zen web apps: install, remove, list, launch\n",
+        "                    Use `omazen webapp help` for details\n",
         "  disable           Disable Omazen live without removing it\n",
         "  enable            Re-enable Omazen live\n",
         "  uninstall         Remove only files owned by Omazen\n",
@@ -250,6 +260,27 @@ fn runtime_paths() -> Result<RuntimePaths, String> {
                 .map(PathBuf::from)
                 .unwrap_or_else(|| PathBuf::from(&home_dir).join(".local/bin"))
         });
+    // Web apps and their launchers live in the data home. The test harness
+    // redirects HOME through OMAZEN_HOME_DIR, so a real XDG_DATA_HOME only
+    // applies without it and can never pull test launchers into a session.
+    let share_dir = if let Some(directory) = nonempty_env("OMAZEN_SHARE_DIR") {
+        PathBuf::from(directory)
+    } else if let (None, Some(directory)) = (
+        nonempty_env("OMAZEN_HOME_DIR"),
+        nonempty_env("XDG_DATA_HOME"),
+    ) {
+        PathBuf::from(directory)
+    } else {
+        PathBuf::from(&home_dir).join(".local/share")
+    };
+    let webapps_dir = nonempty_env("OMAZEN_WEBAPPS_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| share_dir.join("omazen-webapps"));
+    let applications_dir = share_dir.join("applications");
+    let icons_dir = share_dir.join("icons/hicolor/256x256/apps");
+    // Omarchy reads its menu extension from $HOME/.config regardless of XDG.
+    let menu_extension_file =
+        PathBuf::from(&home_dir).join(".config/omarchy/extensions/omarchy-menu.jsonc");
     Ok(RuntimePaths {
         home_dir: PathBuf::from(home_dir),
         palette_file: state_dir.join("palette.json"),
@@ -268,12 +299,17 @@ fn runtime_paths() -> Result<RuntimePaths, String> {
         profile_manifest: owned_dir.join("profile-files"),
         program_manifest: owned_dir.join("program-files"),
         hook_manifest: owned_dir.join("hook-files"),
+        integration_manifest: owned_dir.join("integration-files"),
         provider_mode_file: state_dir.join("provider-mode"),
         active_colors_file: state_dir.join("active-colors"),
         owned_dir,
         backup_dir,
         data_dir,
         local_bin_dir,
+        webapps_dir,
+        applications_dir,
+        icons_dir,
+        menu_extension_file,
     })
 }
 
@@ -637,6 +673,7 @@ fn report_installed_hashes(paths: &RuntimePaths) -> String {
     for (category, manifest) in [
         ("hook", &paths.hook_manifest),
         ("profile", &paths.profile_manifest),
+        ("integration", &paths.integration_manifest),
         ("program", &paths.program_manifest),
     ] {
         for (path, expected) in manifest_entries(manifest) {
@@ -895,6 +932,7 @@ fn doctor(json: bool) -> Result<(), String> {
     if profiles.is_empty() {
         report.fail("no Zen profiles detected");
     }
+    webapp::doctor_integration(&mut report, &paths);
 
     let provider = if paths.skip_theme_hook {
         report.pass("external palette provider mode (Omarchy hook not required)");
@@ -1196,6 +1234,7 @@ fn doctor_profile(report: &mut DoctorReport, paths: &RuntimePaths, profile: &Pat
         "Omazen/OmazenChild.sys.mjs",
         "Omazen/OmazenPalette.sys.mjs",
         "Omazen/OmazenWatcher.sys.mjs",
+        "Omazen/OmazenBoosts.sys.mjs",
     ] {
         doctor_exact_file(
             report,
@@ -1515,6 +1554,21 @@ fn detect_zen_version(program_dir: &Path) -> Option<String> {
 }
 
 fn zen_profiles(paths: &RuntimePaths) -> Vec<PathBuf> {
+    let mut profiles = config_profiles(paths);
+    // `OMAZEN_PROFILE` pins every command to one explicit profile; otherwise
+    // themed web app profiles are Omazen profiles too, so setup upgrades their
+    // runtime, doctor checks it and uninstall removes it.
+    if nonempty_env("OMAZEN_PROFILE").is_none() {
+        for profile in webapp::themed_profiles(paths) {
+            if !profiles.contains(&profile) {
+                profiles.push(profile);
+            }
+        }
+    }
+    profiles
+}
+
+fn config_profiles(paths: &RuntimePaths) -> Vec<PathBuf> {
     if let Some(profile) = nonempty_env("OMAZEN_PROFILE") {
         let profile = PathBuf::from(profile);
         return profile
@@ -1699,6 +1753,7 @@ const PROFILE_FILES: &[&str] = &[
     "Omazen/OmazenChild.sys.mjs",
     "Omazen/OmazenPalette.sys.mjs",
     "Omazen/OmazenWatcher.sys.mjs",
+    "Omazen/OmazenBoosts.sys.mjs",
 ];
 const FX_FILES: &[&str] = &[
     "boot.sys.mjs",
@@ -1748,6 +1803,9 @@ fn setup() -> Result<(), String> {
         println!("Skipping the Omarchy theme hook for an external palette provider.");
     } else {
         install_theme_hook(&paths)?;
+    }
+    if let Err(error) = webapp::install_integration(&paths) {
+        eprintln!("WARNING: Zen web app launchers were not installed: {error}");
     }
     sync_palette()?;
     persist_provider_config(&paths)?;
@@ -1800,6 +1858,12 @@ fn sha256_file(path: &Path) -> io::Result<String> {
         hasher.update(&buffer[..count]);
     }
     Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn sha256_bytes(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
 }
 
 fn manifest_entries(path: &Path) -> Vec<(PathBuf, String)> {
@@ -1910,7 +1974,18 @@ fn install_user_file(
     mode: u32,
     manifest: &Path,
 ) -> Result<(), String> {
-    let source_hash = sha256_file(source).map_err(|error| error.to_string())?;
+    let bytes = fs::read(source).map_err(|error| error.to_string())?;
+    install_user_bytes(paths, &bytes, destination, mode, manifest)
+}
+
+fn install_user_bytes(
+    paths: &RuntimePaths,
+    bytes: &[u8],
+    destination: &Path,
+    mode: u32,
+    manifest: &Path,
+) -> Result<(), String> {
+    let source_hash = sha256_bytes(bytes);
     if destination.is_file() {
         let destination_hash = sha256_file(destination).map_err(|error| error.to_string())?;
         if destination_hash == source_hash {
@@ -1919,6 +1994,7 @@ fn install_user_file(
         }
         if manifest_hash(&paths.profile_manifest, destination).is_none()
             && manifest_hash(&paths.hook_manifest, destination).is_none()
+            && manifest_hash(&paths.integration_manifest, destination).is_none()
         {
             return Err(format!(
                 "refusing to overwrite unowned file: {}",
@@ -1930,7 +2006,7 @@ fn install_user_file(
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
-    fs::copy(source, destination).map_err(|error| error.to_string())?;
+    fs::write(destination, bytes).map_err(|error| error.to_string())?;
     fs::set_permissions(destination, fs::Permissions::from_mode(mode))
         .map_err(|error| error.to_string())?;
     record_owned_file(manifest, destination, &source_hash)
@@ -2404,6 +2480,9 @@ fn uninstall() -> Result<(), String> {
             leftovers = true;
         }
     }
+    if webapp::remove_integration(&paths)? {
+        leftovers = true;
+    }
     let mut program_removals = Vec::new();
     for path in manifest_entries(&paths.program_manifest)
         .into_iter()
@@ -2474,6 +2553,7 @@ fn uninstall() -> Result<(), String> {
         &paths.hook_manifest,
         &paths.profile_manifest,
         &paths.program_manifest,
+        &paths.integration_manifest,
     ] {
         remove_if_exists(manifest).map_err(|error| error.to_string())?;
     }
@@ -2764,7 +2844,16 @@ fn write_palette_atomic(destination: &Path, palette: &Palette) -> io::Result<()>
 mod tests {
     use super::{
         Palette, canonical_palette, is_color, json_escape, parse_assignment, parse_resolved_colors,
+        sha256_bytes,
     };
+
+    #[test]
+    fn sha256_bytes_matches_the_reference_digest() {
+        assert_eq!(
+            sha256_bytes(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
 
     #[test]
     fn assignment_contract() {

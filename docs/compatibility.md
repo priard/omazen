@@ -91,7 +91,9 @@ Zen-specific selectors and `--zen-*` variables are not a stable public API. The 
 ## Known product boundaries
 
 - Browser chrome, URL bar, tabs, sidebar, workspace controls, popups, split containers, Glance containers and relevant internal pages are targeted.
-- Ordinary website content is deliberately not recolored; only vertical and horizontal scrollbar colors are mapped to the active palette.
+- Ordinary website content is deliberately not recolored; only vertical and horizontal scrollbar colors are mapped to the active palette. The single, opt-in exception is a web app created with `omazen webapp install --theme`, whose pages are tinted in that web app's own profile.
 - A web page's `<select>` dropdown is content UI even though Firefox renders it as a chrome `menupopup`. It keeps Zen's stock palette so it continues to follow the page's own color scheme.
-- Zen Boost storage is deliberately not mutated.
+- Zen Boost storage is mutated only in the profiles of web apps created with `omazen webapp install --theme`, and only for the one boost Omazen names and owns per recorded host. Regular Zen profiles keep their boosts untouched.
+- A web app boost is Zen's duotone tint, not a palette replacement: dark page colors lean toward the accent and light ones toward its complement, and lightness moves at most halfway. A light site only becomes dark with `--invert`, which inverts the whole page (images excepted) while the theme is dark, including any dark mode of the site itself.
+- A boost applies to the exact host a web app records, plus the host it lands on after redirects at install time. Pages on other hosts, such as a separate sign-in domain, keep their own colors.
 - No WebExtension/native-messaging alternative is shipped because the privileged backend has proven reliable and the alternate backend has not demonstrated equivalent Zen-specific coverage.
