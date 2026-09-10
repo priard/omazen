@@ -4,6 +4,18 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Painted hovered folder rows with the accent their label foreground already
+  assumes. Folder rows are not toolbarbuttons, so they kept Zen's 7% wash of
+  `--zen-branding-bg-reverse` and light themes showed near-white text on a
+  near-white row. Live-folder labels, whose gradient text fill ignores
+  `color`, now take the palette foreground while hovered.
+- Kept the tab sublabel readable on accent surfaces by replacing its fixed
+  50% opacity with a mix toward the surface, only while it is shown.
+- Mapped the URL-bar result rows, title separator, URL, hover and selected
+  states to the palette instead of Zen's literal `light-dark()` colors.
+
 ## [1.6.1] - 2026-09-05
 
 ### Added

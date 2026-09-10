@@ -1320,3 +1320,102 @@
   --arrowpanel-color: MenuText !important;
   background-color: transparent !important;
 }
+
+/* Folder rows are `.tab-group-label-container`, not toolbarbuttons, so the
+ * accent hover that every toolbar button gets through
+ * `--toolbarbutton-background-color-hover` never reached them. Zen fills their
+ * hover `::before` from `--tab-background-color-hover`, which resolves to a 7%
+ * wash of `--zen-branding-bg-reverse`: a near-surface tint that ignores the
+ * palette. On light themes that tint stayed pale while the rule above had
+ * already switched the label to the accent foreground, leaving near-white text
+ * on a near-white row. Paint the row with the accent it was always meant to
+ * use, so the foreground already applied becomes the correct pairing. */
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container:hover {
+  --tab-background-color-hover: var(--omazen-accent) !important;
+  --toolbarbutton-background-color-hover: var(--omazen-accent) !important;
+}
+
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container:hover::before {
+  background-color: var(--omazen-accent) !important;
+}
+
+/* Live folders paint their label with a gradient clipped to the glyphs plus
+ * `-webkit-text-fill-color: transparent`, which overrides `color` outright.
+ * The accent foreground was therefore a no-op on those labels and the text
+ * kept Zen's own `--sidebar-text-color`. Drop the gradient while hovered and
+ * fill the glyphs from the palette instead. */
+:root[data-omazen-enabled="true"] #navigator-toolbox
+  zen-folder > .tab-group-label-container:hover [live-folder-animation] {
+  background: none !important;
+  -webkit-text-fill-color: var(--omazen-accent-foreground) !important;
+  color: var(--omazen-accent-foreground) !important;
+}
+
+/* Zen de-emphasises the tab sublabel with a fixed `opacity: 0.5` rather than a
+ * derived color. Over the accent surface a hovered or selected tab uses, the
+ * glyphs collapse to roughly 44% white and fall to 2.32:1. That opacity also
+ * drives the reveal animation, so only the already-shown state is raised, and
+ * the de-emphasis is preserved as a mix toward the surface. */
+:root[data-omazen-enabled="true"] .tabbrowser-tab[zen-show-sublabel]:is(
+  :hover,
+  [selected],
+  [multiselected]
+) .tab-label-container .zen-tab-sublabel {
+  color: color-mix(
+    in srgb,
+    var(--omazen-accent-foreground) 90%,
+    var(--omazen-accent)
+  ) !important;
+  opacity: 1 !important;
+}
+
+/* The urlbar result list is painted from literal colors that never consult the
+ * palette: rows use `light-dark(rgba(0,0,0,.7), rgba(255,255,255,.7))`, the
+ * title separator and the URL use `light-dark(#4f4f4f, #aaa)`, the hover wash
+ * is 5% of `--zen-branding-bg-reverse`, and the selected row forces
+ * `color: white` onto every descendant. */
+:root[data-omazen-enabled="true"] .urlbarView-row {
+  color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] :is(
+  .urlbarView-url,
+  .urlbarView-action
+) {
+  color: color-mix(
+    in srgb,
+    var(--omazen-foreground-muted) 40%,
+    var(--omazen-foreground)
+  ) !important;
+}
+
+:root[data-omazen-enabled="true"] .urlbarView-title-separator::before {
+  color: color-mix(
+    in srgb,
+    var(--omazen-foreground-muted) 40%,
+    var(--omazen-foreground)
+  ) !important;
+}
+
+:root[data-omazen-enabled="true"] .urlbarView-row:hover,
+:root[data-omazen-enabled="true"] .urlbarView-row:hover .urlbarView-favicon {
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background-light) 88%,
+    var(--omazen-accent)
+  ) !important;
+}
+
+:root[data-omazen-enabled="true"] .urlbarView-row[selected] {
+  background-color: var(--omazen-selection) !important;
+}
+
+:root[data-omazen-enabled="true"] .urlbarView-row[selected] * {
+  color: var(--omazen-selection-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] .urlbarView-row[selected] .urlbarView-title-separator::before {
+  color: var(--omazen-selection-foreground) !important;
+}
