@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 const {
   BOOST_NAME,
   DEFAULT_STRENGTH,
+  GLASS_PAGE_CSS,
   boostDataForPalette,
   createWebAppBoostDriver,
   hexToHsl,
@@ -31,7 +32,10 @@ const dark = { mode: "dark", accent: "#7aa2f7" };
   assert.equal(data.contrast, Math.round((1 - DEFAULT_STRENGTH) * 1000) / 1000);
   assert.equal(data.secondaryDotAngleDegDelta, 0);
   assert.equal(data.smartInvert, false);
+  assert.equal(data.customCSS, GLASS_PAGE_CSS, "the page root is cleared for the glass window");
 }
+assert.equal(boostDataForPalette(dark, { invert: true }).customCSS, GLASS_PAGE_CSS, "inverted pages read on dark glass");
+assert.equal(boostDataForPalette(dark).customCSS, "", "a site shown as is under a dark theme keeps its background");
 assert.equal(boostDataForPalette(dark, { invert: true }).smartInvert, true, "light sites invert in dark themes");
 assert.equal(boostDataForPalette(light, { invert: true }).smartInvert, false, "light themes restore the page");
 assert.equal(boostDataForPalette(dark).smartInvert, false, "sites are not inverted unless marked light");

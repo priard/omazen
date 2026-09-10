@@ -828,9 +828,17 @@ grep -Fq 'user_pref("zen.view.compact.enable-at-startup", true);' "$MAIL_APP/pro
 if grep -Fq 'omazen.webapp.hosts' "$MAIL_APP/profile/user.js"; then
   fail "an unthemed web app must not opt into page theming"
 fi
-assert_absent "$MAIL_APP/profile/chrome"
+assert_absent "$MAIL_APP/profile/chrome/utils"
+assert_absent "$MAIL_APP/profile/chrome/JS"
+grep -Fq -- '--zen-webview-border-radius: 0px' "$MAIL_APP/profile/chrome/userChrome.css" || \
+  fail "web app profile squares the page's corners"
 grep -Fq 'user_pref("zen.theme.content-element-separation", 0);' "$MAIL_APP/profile/user.js" || \
   fail "web app profile drops Zen's content frame"
+grep -Fq 'user_pref("browser.translations.automaticallyPopup", false);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile keeps the translations panel from sliding the toolbar out"
+if grep -Fq 'zen.widget.linux.transparency' "$MAIL_APP/profile/user.js"; then
+  fail "an unthemed web app must not be glass"
+fi
 grep -Fxq 'X-Omazen-Webapp=mail' "$MAIL_LAUNCHER" || fail "web app launcher carries the ownership marker"
 grep -Fxq 'StartupWMClass=omazen-webapp-mail' "$MAIL_LAUNCHER" || fail "web app launcher has its own window class"
 grep -Eq '^Exec=".*/omazen" webapp launch mail$' "$MAIL_LAUNCHER" || fail "web app launcher starts omazen webapp launch"
@@ -858,6 +866,8 @@ grep -Fq 'user_pref("omazen.webapp.invert", true);' "$DOCS_PROFILE/user.js" || \
   fail "themed web app records inversion"
 grep -Fq 'user_pref("userChromeJS.firstRunShown", true);' "$DOCS_PROFILE/user.js" || \
   fail "themed web app hides the fx-autoconfig first-run bar"
+grep -Fq 'user_pref("zen.widget.linux.transparency", true);' "$DOCS_PROFILE/user.js" || \
+  fail "themed web app window is glass"
 assert_file "$DOCS_PROFILE/chrome/utils/boot.sys.mjs"
 assert_file "$DOCS_PROFILE/chrome/JS/omazen-bridge.uc.js"
 assert_file "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs"
@@ -873,7 +883,13 @@ grep -Fq 'Omarchy menu offers Zen web apps' <<<"$doctor_webapps" || fail "doctor
 rm -f "$DOCS_PROFILE/chrome/JS/Omazen/OmazenBoosts.sys.mjs" "$MAIL_LAUNCHER"
 printf '%s\n' 'user_pref("zen.view.compact.enable-at-startup", true);' \
   'user_pref("layout.css.devPixelsPerPx", "1.25");' >"$MAIL_APP/profile/user.js"
+printf ':root { --mine: 1; }\n' >"$MAIL_APP/profile/chrome/userChrome.css"
+rm -f "$DOCS_PROFILE/chrome/userChrome.css"
 run_omazen setup >/dev/null
+[[ $(<"$MAIL_APP/profile/chrome/userChrome.css") == ':root { --mine: 1; }' ]] || \
+  fail "setup keeps a web app userChrome.css the user took over"
+grep -Fq 'omazen:webapp-managed' "$DOCS_PROFILE/chrome/userChrome.css" || \
+  fail "setup restores the managed web app userChrome.css"
 grep -Fq 'user_pref("zen.theme.content-element-separation", 0);' "$MAIL_APP/profile/user.js" || \
   fail "setup refreshes the preferences Omazen manages in web app profiles"
 grep -Fq 'user_pref("layout.css.devPixelsPerPx", "1.25");' "$MAIL_APP/profile/user.js" || \

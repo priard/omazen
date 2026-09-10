@@ -24,6 +24,10 @@ export const WEBAPP_STRENGTH_PREF = "omazen.webapp.strength";
 export const BOOST_NAME = "Omarchy theme (Omazen web app)";
 export const DEFAULT_STRENGTH = 0.55;
 export const BOOSTS_MANAGER_URI = "resource:///modules/zen/boosts/ZenBoostsManager.sys.mjs";
+// A themed web app window is glass: a translucent palette layer over the
+// compositor's blur. A transparent page root lets it show through; elements
+// that paint their own background keep it, tinted by the boost.
+export const GLASS_PAGE_CSS = "html, body { background: transparent !important; }";
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -77,6 +81,9 @@ export function boostDataForPalette(palette, { invert = false, strength = DEFAUL
   if (!palette || !HEX_COLOR.test(palette.accent ?? "")) return null;
   const { h, s, l } = hexToHsl(palette.accent);
   const amount = Number.isFinite(strength) ? clamp(strength, 0, 1) : DEFAULT_STRENGTH;
+  // --invert marks a light site: invert it only while the theme is dark, so
+  // a light theme restores the page instead of leaving it dark.
+  const smartInvert = Boolean(invert) && palette.mode === "dark";
   return {
     boostName: BOOST_NAME,
     enableColorBoost: true,
@@ -91,9 +98,12 @@ export function boostDataForPalette(palette, { invert = false, strength = DEFAUL
     contrast: round(1 - amount),
     // No rotation keeps light and dark page colors on the palette's own hue.
     secondaryDotAngleDegDelta: 0,
-    // --invert marks a light site: invert it only while the theme is dark, so
-    // a light theme restores the page instead of leaving it dark.
-    smartInvert: Boolean(invert) && palette.mode === "dark",
+    smartInvert,
+    // The page root is cleared only where its text stays readable on the
+    // glass: dark text on a light theme, or inverted light text on a dark one.
+    // A site shown as is under a dark theme may only have dark text, so it
+    // keeps its own background.
+    customCSS: palette.mode === "light" || smartInvert ? GLASS_PAGE_CSS : "",
     changeWasMade: true,
   };
 }

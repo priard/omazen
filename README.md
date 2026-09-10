@@ -123,7 +123,8 @@ to the previous 250 ms polling behavior.
 
 Alongside Omarchy's Chromium-based web apps, Omazen creates Zen web apps. Each
 one opens a single site in its own isolated Zen profile, starts in compact mode
-without the sidebar or toolbar, and gets its own window class, so the app
+without the sidebar or toolbar, frame, rounded corners or translation pop-up,
+and gets its own window class, so the app
 launcher, alt-tab and Hyprland rules treat it as a separate application.
 Starting a web app that is already open focuses its window.
 
@@ -136,8 +137,16 @@ by default the site's own icon is fetched.
 `--theme` is optional. It installs Omazen's runtime into that web app's profile
 and tints its pages with the active Omarchy theme through a Zen boost, following
 theme switches live. It is a tint in the theme's accent rather than a repaint
-with the palette's exact colors. `--invert` marks a light site: while the theme
+with the palette's exact colors. A themed web app is also glass: its window is
+a translucent layer of the theme background over Hyprland's blur of the
+wallpaper, and the page's own background is cleared so the text stays sharp on
+it. Parts of a page that paint their own background keep it.
+
+Pages follow the theme's light or dark scheme, so a site with its own dark mode
+switches by itself. `--invert` is for light sites without one: while the theme
 is dark the page is inverted, images excepted, and a light theme restores it.
+Under a dark theme only such inverted pages sit on the glass; a site shown as
+is keeps its own background, because its text may be dark.
 Only profiles created this way can be themed; regular Zen profiles and their
 boosts are never touched. The [compatibility guide](docs/compatibility.md)
 lists the limits.

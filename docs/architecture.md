@@ -188,8 +188,13 @@ compact mode with the tab bar and toolbar hidden and no hover reveal, and skips
 first-run, update and default-browser prompts. It also removes the gap Zen
 leaves around the page, which otherwise reads as a rounded, shadowed card and,
 in compact mode, as a panel edge on the left, so the window border is the web
-app's only frame. Setup regenerates these managed preferences in every web app
-profile and keeps any preference the user added. The launcher
+app's only frame. It also keeps Zen's translations offer from opening its
+panel, which in compact mode would slide the toolbar out. Zen keeps a minimum
+radius on the page that no preference removes, so the profile also gets a
+`chrome/userChrome.css` marked `omazen:webapp-managed` that squares the page
+and drops Omazen's rounding and shadow. Setup regenerates these managed
+preferences in every web app profile and keeps any preference the user added;
+it rewrites the userChrome.css only while it still carries the marker. The launcher
 `~/.local/share/applications/omazen-webapp-<id>.desktop` carries an
 `X-Omazen-Webapp` ownership marker and runs `omazen webapp launch <id>`, which
 focuses the web app's window when Hyprland already shows one and otherwise
@@ -211,6 +216,24 @@ boost matches the palette; a save attempted before Zen has loaded its boost
 store is retried when that load finishes. The bridge refuses to start the
 driver unless the profile directory lies inside the web apps directory, so a
 copied preference cannot theme a regular profile.
+
+A themed web app is glass. Its profile sets `zen.widget.linux.transparency`,
+which gives the Zen window an alpha channel that Hyprland blurs, and
+`browser.tabs.allow_transparent_browser`, which lets the page itself be
+transparent. When the bridge runs the boost driver it marks the window root
+with `data-omazen-webapp`, and the chrome stylesheet then paints one
+translucent layer of the palette background on `#zen-browser-background` and
+clears every surface above it. Under a light theme, or when the page is
+inverted, the boost carries a fixed custom stylesheet that makes the page's
+`html` and `body` transparent; a page shown as is under a dark theme keeps its
+background, because a light site's dark text would be unreadable on dark glass.
+
+A page takes its `prefers-color-scheme` from its browser element, which Zen
+otherwise leaves on the desktop's scheme. In a web app window the stylesheet
+sets that element's `color-scheme` from the palette mode, so a site with its
+own dark mode follows the theme. For a web app marked `--invert` the bridge
+adds `data-omazen-webapp-invert` and the page keeps the light scheme; a dark
+scheme would be inverted back to light.
 
 `omazen setup` also installs `org.omazen.WebAppInstall.desktop` and
 `org.omazen.WebAppRemove.desktop` and adds Install and Remove entries to

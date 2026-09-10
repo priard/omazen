@@ -4,7 +4,25 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Web apps created with `--theme` are now glass: the window is a translucent
+  layer of the theme background over Hyprland's blur of the wallpaper, and the
+  page's own background is cleared so its text stays sharp on it. Under a
+  dark theme this applies to pages marked `--invert`; a site shown as is keeps
+  its background, since its text may be dark.
+- Themed web apps pass the theme's light or dark scheme to their pages, so a
+  site with its own dark mode follows theme switches. Pages used to get the
+  desktop's scheme regardless of the Omarchy theme. Web apps marked
+  `--invert` keep the light scheme, which the inversion then darkens.
+
 ### Changed
+
+- Web app windows now have square corners. Zen keeps a minimum radius on the
+  page that no preference removes, so each web app profile gets a
+  `userChrome.css` that `omazen setup` refreshes until the user takes it over.
+- Web apps no longer open Zen's translations panel on their own, which slid
+  the compact toolbar out over the page.
 
 - Web app windows no longer show Zen's content frame. The gap Zen leaves
   around the page read as a rounded, shadowed card and, in compact mode, as a

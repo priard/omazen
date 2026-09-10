@@ -27,7 +27,8 @@ chrome/JS/Omazen/omazen-content-v1.7.0.css
 
 The same files are installed into the dedicated profile of each web app created
 with `omazen webapp install --theme`. Web apps created without `--theme` receive
-no privileged files at all.
+no privileged files at all, only a `userChrome.css` that squares the page's
+corners.
 
 Program-level files for the supported Zen package:
 
@@ -74,7 +75,8 @@ The first two may be reused from a compatible pre-existing fx-autoconfig install
   `omazen webapp install --theme` writes; every other profile, including all
   regular Zen profiles, returns before the boost manager is even loaded. The
   driver writes only numeric color parameters derived from the validated accent
-  and mode, into one boost per recorded host that it names and owns. Hosts must
+  and mode, plus one fixed stylesheet that makes the page root transparent,
+  into one boost per recorded host that it names and owns. Hosts must
   be plain DNS names, and boosts the user created are left alone. Disabling
   Omazen removes the owned boosts.
 - A web app's URL never appears in a launcher's `Exec` line or in the Omarchy

@@ -1419,3 +1419,56 @@
 :root[data-omazen-enabled="true"] .urlbarView-row[selected] .urlbarView-title-separator::before {
   color: var(--omazen-selection-foreground) !important;
 }
+
+/* Web apps created with `omazen webapp install --theme` are glass. Their
+ * profile lets Zen draw the window with an alpha channel, so the compositor
+ * blurs the wallpaper behind it. A single translucent layer of the palette
+ * background tints the whole window, every surface above it is cleared, and
+ * the web app's boost makes the page root transparent. */
+:root[data-omazen-enabled="true"][data-omazen-webapp] {
+  --omazen-glass: color-mix(in srgb, var(--omazen-background) 70%, transparent);
+  --zen-main-browser-background: transparent !important;
+  --zen-main-browser-background-old: transparent !important;
+  background: transparent !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-webapp] #zen-browser-background::before {
+  background: var(--omazen-glass) !important;
+  opacity: 1 !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-webapp] #zen-browser-background::after {
+  background: none !important;
+  opacity: 0 !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-webapp] :is(
+  #browser,
+  #zen-main-app-wrapper,
+  #zen-appcontent-wrapper,
+  #zen-tabbox-wrapper,
+  #tabbrowser-tabbox,
+  #tabbrowser-tabpanels,
+  .browserStack,
+  browser[transparent="true"]
+) {
+  background: none !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-webapp] .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay) {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+/* A page takes its color scheme from its browser element, which otherwise
+ * follows the desktop's scheme rather than the Omarchy theme. A web app
+ * follows the theme, so a site with its own dark mode switches with it. A
+ * site marked --invert keeps the light scheme: under a dark theme the boost's
+ * inversion darkens it, and a dark scheme would be inverted back to light. */
+:root[data-omazen-enabled="true"][data-omazen-webapp] browser[type="content"] {
+  color-scheme: light !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-webapp][data-omazen-mode="dark"]:not([data-omazen-webapp-invert]) browser[type="content"] {
+  color-scheme: dark !important;
+}
