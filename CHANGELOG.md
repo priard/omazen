@@ -4,6 +4,14 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Web apps no longer pile up tabs. Zen resumed the previous session on every
+  start and the launcher opened the web app's URL on top of it, so each start
+  added another tab of the same page, hidden in compact mode. Web app profiles
+  now start fresh like Omarchy's web apps; `omazen setup` applies this to
+  existing web apps on their next start.
+
 ## [1.8.0] - 2026-09-10
 
 ### Added

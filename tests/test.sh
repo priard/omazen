@@ -836,6 +836,8 @@ grep -Fq 'user_pref("zen.theme.content-element-separation", 0);' "$MAIL_APP/prof
   fail "web app profile drops Zen's content frame"
 grep -Fq 'user_pref("browser.translations.automaticallyPopup", false);' "$MAIL_APP/profile/user.js" || \
   fail "web app profile keeps the translations panel from sliding the toolbar out"
+grep -Fq 'user_pref("browser.startup.page", 1);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile does not pile up restored tabs on every start"
 if grep -Fq 'zen.widget.linux.transparency' "$MAIL_APP/profile/user.js"; then
   fail "an unthemed web app must not be glass"
 fi

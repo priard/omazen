@@ -140,7 +140,9 @@ one opens a single site in its own isolated Zen profile, starts in compact mode
 without the sidebar or toolbar, frame, rounded corners or translation pop-up,
 and gets its own window class, so the app
 launcher, alt-tab and Hyprland rules treat it as a separate application.
-Starting a web app that is already open focuses its window.
+Starting a web app that is already open focuses its window; otherwise it opens
+the site fresh, like Omarchy's web apps, without restoring the tabs of its
+previous session. Sign-ins and site data are kept.
 
 The installer (and `omazen setup`) adds **Install Zen Web App** and **Remove Zen
 Web App** to the app launcher and the matching entries under Install and Remove

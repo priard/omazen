@@ -76,6 +76,11 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.aboutwelcome.enabled", false);
 user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.sessionstore.resume_from_crash", false);
+// Zen resumes the previous session on start, and the launcher opens the web
+// app's URL on top of it, so every start used to add another tab. Like
+// Omarchy's web apps, each start opens the site fresh; Zen then restores
+// only pinned tabs.
+user_pref("browser.startup.page", 1);
 user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
 "#;
 
