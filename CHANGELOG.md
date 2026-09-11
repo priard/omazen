@@ -4,6 +4,8 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-09-11
+
 ### Changed
 
 - Web apps switch off the Zen shortcuts that brought back the sidebar or

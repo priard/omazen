@@ -34,7 +34,7 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.8.0` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.8.1` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
 the qualified command and rollback contracts. It installs with one command and
 includes [Zen web apps](#zen-web-apps) whose pages can take the theme's own
