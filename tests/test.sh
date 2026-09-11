@@ -838,6 +838,8 @@ grep -Fq 'user_pref("browser.translations.automaticallyPopup", false);' "$MAIL_A
   fail "web app profile keeps the translations panel from sliding the toolbar out"
 grep -Fq 'user_pref("browser.startup.page", 1);' "$MAIL_APP/profile/user.js" || \
   fail "web app profile does not pile up restored tabs on every start"
+grep -Fq 'user_pref("browser.tabs.closeWindowWithLastTab", true);' "$MAIL_APP/profile/user.js" || \
+  fail "closing a web app's last tab closes the web app"
 if grep -Fq 'zen.widget.linux.transparency' "$MAIL_APP/profile/user.js"; then
   fail "an unthemed web app must not be glass"
 fi
@@ -896,7 +898,13 @@ printf '%s\n' 'user_pref("zen.view.compact.enable-at-startup", true);' \
   'user_pref("layout.css.devPixelsPerPx", "1.25");' >"$MAIL_APP/profile/user.js"
 printf ':root { --mine: 1; }\n' >"$MAIL_APP/profile/chrome/userChrome.css"
 rm -f "$DOCS_PROFILE/chrome/userChrome.css"
+printf '%s' '{"shortcuts":[{"id":"zen-compact-mode-toggle","key":"s","keycode":"","group":"zen-compact-mode","l10nId":null,"modifiers":{"control":false,"alt":false,"shift":false,"meta":false,"accel":true},"action":"cmd_toggleCompactModeIgnoreHover","disabled":false,"reserved":false,"internal":false},{"id":"key_find","key":"f","keycode":null,"group":"searchAndFind","l10nId":null,"modifiers":{"control":false,"alt":false,"shift":false,"meta":false,"accel":true},"action":"cmd_find","disabled":false,"reserved":false,"internal":false}]}' \
+  >"$MAIL_APP/profile/zen-keyboard-shortcuts.json"
 run_omazen setup >/dev/null
+grep -Fq '"id":"zen-compact-mode-toggle","key":"s","keycode":"","group":"zen-compact-mode","l10nId":null,"modifiers":{"control":false,"alt":false,"shift":false,"meta":false,"accel":true},"action":"cmd_toggleCompactModeIgnoreHover","disabled":true' \
+  "$MAIL_APP/profile/zen-keyboard-shortcuts.json" || fail "setup switches off Zen's compact mode shortcut in web apps"
+grep -Fq '"action":"cmd_find","disabled":false' "$MAIL_APP/profile/zen-keyboard-shortcuts.json" || \
+  fail "setup keeps ordinary browser shortcuts in web apps"
 [[ $(<"$MAIL_APP/profile/chrome/userChrome.css") == ':root { --mine: 1; }' ]] || \
   fail "setup keeps a web app userChrome.css the user took over"
 grep -Fq 'omazen:webapp-managed' "$DOCS_PROFILE/chrome/userChrome.css" || \

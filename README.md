@@ -142,7 +142,14 @@ and gets its own window class, so the app
 launcher, alt-tab and Hyprland rules treat it as a separate application.
 Starting a web app that is already open focuses its window; otherwise it opens
 the site fresh, like Omarchy's web apps, without restoring the tabs of its
-previous session. Sign-ins and site data are kept.
+previous session. Sign-ins and site data are kept. Zen shortcuts that would
+bring back the sidebar or toolbar or change the layout are switched off, so the
+site gets those keys instead: `Ctrl+S` (compact mode), `Ctrl+Alt+S`, `Ctrl+B`,
+`Ctrl+H`, `Ctrl+D`, `Ctrl+K`, workspace, split view, Glance and pin shortcuts.
+Zen reserves `Ctrl+T`, `Ctrl+N`, `Ctrl+W` and `Ctrl+Q`, so those still work. A
+new web app picks this up from its second start, because Zen writes its
+shortcut file on the first. Closing the page with `Ctrl+W` closes the web app
+rather than leaving an empty window.
 
 The installer (and `omazen setup`) adds **Install Zen Web App** and **Remove Zen
 Web App** to the app launcher and the matching entries under Install and Remove
