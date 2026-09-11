@@ -189,7 +189,18 @@ first-run, update and default-browser prompts. It also removes the gap Zen
 leaves around the page, which otherwise reads as a rounded, shadowed card and,
 in compact mode, as a panel edge on the left, so the window border is the web
 app's only frame. It also keeps Zen's translations offer from opening its
-panel, which in compact mode would slide the toolbar out. Zen keeps a minimum
+panel, which in compact mode would slide the toolbar out. Zen resumes the
+previous session by default and the launcher passes the web app's URL, so the
+profile sets `browser.startup.page` to 1: each start opens the URL once and
+Zen restores only pinned tabs. Zen also turns off
+`browser.tabs.closeWindowWithLastTab`, which a web app turns back on, so
+closing its page closes the web app. Zen keeps its keyboard shortcuts in the
+profile's `zen-keyboard-shortcuts.json`, fills in missing defaults on load and
+honors a `disabled` flag per shortcut. Before a web app starts, and on setup,
+Omazen sets that flag on the shortcuts that reveal the sidebar or toolbar or
+change the layout (compact mode, sidebars, workspaces, split view, Glance,
+pinning), but only while the profile's `lock` names no running process, since
+a running Zen owns the file. Zen keeps a minimum
 radius on the page that no preference removes, so the profile also gets a
 `chrome/userChrome.css` marked `omazen:webapp-managed` that squares the page
 and drops Omazen's rounding and shadow. Setup regenerates these managed

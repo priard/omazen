@@ -4,6 +4,25 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-09-11
+
+### Changed
+
+- Web apps switch off the Zen shortcuts that brought back the sidebar or
+  toolbar or changed the layout, such as `Ctrl+S` (compact mode), `Ctrl+B`,
+  `Ctrl+D`, `Ctrl+K`, workspace, split view, Glance and pin shortcuts, so
+  the site receives those keys instead.
+- Closing a web app's page (`Ctrl+W`) now closes the web app. Zen kept the
+  window open on an empty tab after its last tab closed.
+
+### Fixed
+
+- Web apps no longer pile up tabs. Zen resumed the previous session on every
+  start and the launcher opened the web app's URL on top of it, so each start
+  added another tab of the same page, hidden in compact mode. Web app profiles
+  now start fresh like Omarchy's web apps; `omazen setup` applies this to
+  existing web apps on their next start.
+
 ## [1.8.0] - 2026-09-10
 
 ### Added

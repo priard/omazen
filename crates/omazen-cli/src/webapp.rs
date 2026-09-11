@@ -76,6 +76,14 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.aboutwelcome.enabled", false);
 user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.sessionstore.resume_from_crash", false);
+// Zen resumes the previous session on start, and the launcher opens the web
+// app's URL on top of it, so every start used to add another tab. Like
+// Omarchy's web apps, each start opens the site fresh; Zen then restores
+// only pinned tabs.
+user_pref("browser.startup.page", 1);
+// Zen keeps a window open on an empty tab after its last tab closes; closing
+// a web app's page (Ctrl+W) closes the web app instead.
+user_pref("browser.tabs.closeWindowWithLastTab", true);
 user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
 "#;
 
@@ -453,6 +461,117 @@ fn write_user_chrome(profile: &Path) -> Result<bool, String> {
     Ok(true)
 }
 
+/// Zen shortcuts that bring back the sidebar or toolbar, change the layout or
+/// open views a web app hides. Disabled, their keys reach the page instead.
+const DISABLED_SHORTCUTS: &[&str] = &[
+    "zen-compact-mode-toggle",
+    "zen-compact-mode-show-sidebar",
+    "toggleSidebarKb",
+    "viewBookmarksSidebarKb",
+    "viewGenaiChatSidebarKb",
+    "viewBookmarksToolbarKb",
+    "key_gotoHistory",
+    "key_showAllTabs",
+    "addBookmarkAsKb",
+    "key_search",
+    "key_search2",
+    "zen-workspace-forward",
+    "zen-workspace-backward",
+    "zen-split-view-grid",
+    "zen-split-view-vertical",
+    "zen-split-view-horizontal",
+    "zen-split-view-unsplit",
+    "zen-new-empty-split-view",
+    "zen-glance-expand",
+    "zen-toggle-pin-tab",
+    "zen-close-all-unpinned-tabs",
+    "zen-new-unsynced-window",
+];
+
+/// Sets `"disabled":true` on the listed shortcuts in the compact JSON Zen
+/// writes to zen-keyboard-shortcuts.json; None when nothing changes.
+fn disable_shortcuts(json: &str, ids: &[&str]) -> Option<String> {
+    const ENABLED: &str = "\"disabled\":false";
+    let mut text = json.to_owned();
+    let mut changed = false;
+    for id in ids {
+        let Some(start) = text.find(&format!("{{\"id\":\"{id}\",")) else {
+            continue;
+        };
+        let Some(length) = object_end(&text[start..]) else {
+            continue;
+        };
+        if let Some(offset) = text[start..start + length].find(ENABLED) {
+            let at = start + offset;
+            text.replace_range(at..at + ENABLED.len(), "\"disabled\":true");
+            changed = true;
+        }
+    }
+    changed.then_some(text)
+}
+
+/// Length of the JSON object that `text` starts with, skipping strings.
+fn object_end(text: &str) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (index, byte) in text.bytes().enumerate() {
+        if in_string {
+            match byte {
+                _ if escaped => escaped = false,
+                b'\\' => escaped = true,
+                b'"' => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+        match byte {
+            b'"' => in_string = true,
+            b'{' => depth += 1,
+            b'}' => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some(index + 1);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// True while the Zen process named in the profile's lock (`host:+pid`) runs.
+fn profile_in_use(profile: &Path) -> bool {
+    fs::read_link(profile.join("lock"))
+        .ok()
+        .and_then(|target| {
+            let target = target.to_string_lossy();
+            target.rsplit_once('+')?.1.parse::<u32>().ok()
+        })
+        .is_some_and(|pid| Path::new("/proc").join(pid.to_string()).exists())
+}
+
+/// Returns true when the file changed. Zen writes it on a web app's first
+/// start and owns it while running, so it is only edited in between.
+fn disable_layout_shortcuts(profile: &Path) -> Result<bool, String> {
+    if profile_in_use(profile) {
+        return Ok(false);
+    }
+    let path = profile.join("zen-keyboard-shortcuts.json");
+    let json = match fs::read_to_string(&path) {
+        Ok(json) => json,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error.to_string()),
+    };
+    let Some(text) = disable_shortcuts(&json, DISABLED_SHORTCUTS) else {
+        return Ok(false);
+    };
+    let temporary = path.with_extension("json.omazen-tmp");
+    fs::write(&temporary, text).map_err(|error| error.to_string())?;
+    fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
 // A boost is keyed on the exact host of the page, so record both the host a
 // web app opens on and the one it lands on after redirects.
 fn resolve_hosts(url: &str) -> Vec<String> {
@@ -615,6 +734,9 @@ fn launch(arguments: &[OsString]) -> Result<(), String> {
         focus_window(&address);
         return Ok(());
     }
+    // Launched from the app launcher there is no terminal to report to, and a
+    // web app with Zen's own shortcuts still works.
+    let _ = disable_layout_shortcuts(&app.profile());
     let zen = paths.zen_program_dir.join("zen-bin");
     let mut command = Command::new("setsid");
     if command_exists("uwsm-app") {
@@ -1201,7 +1323,11 @@ pub(crate) fn install_integration(paths: &RuntimePaths) -> Result<(), String> {
             app.invert,
             !app.opaque,
         )
-        .and_then(|prefs| Ok(write_user_chrome(&app.profile())? || prefs));
+        .and_then(|prefs| {
+            let chrome = write_user_chrome(&app.profile())?;
+            let shortcuts = disable_layout_shortcuts(&app.profile())?;
+            Ok(prefs || chrome || shortcuts)
+        });
         match refreshed {
             Ok(true) => println!(
                 "Updated Zen web app settings (applied on its next start): {}",
@@ -1613,6 +1739,31 @@ mod tests {
             !managed_prefs(None, false, true).contains("zen.widget.linux.transparency"),
             "only themed apps are glass"
         );
+    }
+
+    #[test]
+    fn layout_shortcuts_are_disabled_and_others_kept() {
+        let json = concat!(
+            r#"{"shortcuts":[{"id":"key_find","key":"f","modifiers":{"accel":true},"#,
+            r#""action":"cmd_find","disabled":false},{"id":"zen-compact-mode-toggle","#,
+            r#""key":"s","l10nId":"a}\"b","modifiers":{"control":false,"accel":true},"#,
+            r#""action":"cmd_toggleCompactModeIgnoreHover","disabled":false,"reserved":false},"#,
+            r#"{"id":"zen-glance-expand","key":"o","modifiers":{},"disabled":true}]}"#
+        );
+        let updated =
+            disable_shortcuts(json, DISABLED_SHORTCUTS).expect("the compact mode shortcut changes");
+        assert!(updated.contains(r#""action":"cmd_toggleCompactModeIgnoreHover","disabled":true"#));
+        assert!(
+            updated.contains(r#""action":"cmd_find","disabled":false"#),
+            "other shortcuts are kept"
+        );
+        assert_eq!(
+            disable_shortcuts(&updated, DISABLED_SHORTCUTS),
+            None,
+            "disabling is idempotent"
+        );
+        assert_eq!(object_end(r#"{"a":{"b":"}"}}tail"#), Some(15));
+        assert_eq!(object_end(r#"{"open":"#), None);
     }
 
     #[test]
