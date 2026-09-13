@@ -4,6 +4,20 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- A link that opens a new tab in a themed web app now opens in the desktop's
+  default browser, and the tab is closed. Navigation inside the page and the
+  pop-up windows sign-in flows use stay in the web app.
+
+### Changed
+
+- Web apps no longer offer to save passwords, autofill forms or translate
+  pages: those prompts slid the toolbar out over the page, and the site's own
+  account handling is untouched.
+- A web app's page menu drops the entries that open a link somewhere else,
+  hand the page to another device or open developer tools.
+
 ## [1.8.1] - 2026-09-11
 
 ### Changed

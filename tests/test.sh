@@ -850,6 +850,14 @@ grep -Fq 'user_pref("browser.startup.page", 1);' "$MAIL_APP/profile/user.js" || 
   fail "web app profile does not pile up restored tabs on every start"
 grep -Fq 'user_pref("browser.tabs.closeWindowWithLastTab", true);' "$MAIL_APP/profile/user.js" || \
   fail "closing a web app's last tab closes the web app"
+grep -Fq 'user_pref("signon.rememberSignons", false);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile does not offer to save passwords"
+grep -Fq 'user_pref("browser.translations.enable", false);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile does not offer translations"
+grep -Fq '#context-openlinkintab' "$MAIL_APP/profile/chrome/userChrome.css" || \
+  fail "web app page menu drops the entries that open a link elsewhere"
+grep -Fq '#context-inspect' "$MAIL_APP/profile/chrome/userChrome.css" || \
+  fail "web app page menu drops developer tools"
 if grep -Fq 'zen.widget.linux.transparency' "$MAIL_APP/profile/user.js"; then
   fail "an unthemed web app must not be glass"
 fi
@@ -1174,6 +1182,9 @@ pass "bridge filters mutations, rotates logs, and cleans up runtime resources"
 
 node "$PROJECT_ROOT/tests/watcher-regressions.mjs" || fail "JavaScript watcher regression"
 pass "shared inotify watcher filters events and broadcasts updates"
+
+node "$PROJECT_ROOT/tests/webapp-boosts.mjs" >/dev/null || fail "JavaScript web app boost regression"
+pass "web app boosts follow the theme's background and foreground"
 
 FOREIGN_PROFILE="$TEST_ROOT/foreign-profile"
 FOREIGN_PROFILE_STATE="$TEST_ROOT/foreign-profile-state"

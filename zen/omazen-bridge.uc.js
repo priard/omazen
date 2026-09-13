@@ -120,6 +120,70 @@
     }
   }
 
+  // A web app is one site in one window, so a link that opens a new tab
+  // belongs to the desktop's browser. Navigation inside the tab stays, and so
+  // do pop-up windows, which sign-in flows use.
+  const WEBAPP_BROWSER_COMMANDS = Object.freeze([
+    "/usr/bin/omarchy-launch-browser",
+    "/usr/bin/xdg-open",
+  ]);
+  let stopWebAppLinkHandoff = null;
+
+  function webAppHosts() {
+    return Services.prefs
+      .getStringPref("omazen.webapp.hosts", "")
+      .split(",")
+      .map(host => host.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  async function openInDesktopBrowser(url) {
+    const { Subprocess } = ChromeUtils.importESModule(
+      "resource://gre/modules/Subprocess.sys.mjs",
+    );
+    for (const command of WEBAPP_BROWSER_COMMANDS) {
+      try {
+        const process = await Subprocess.call({ command, arguments: [url] });
+        process.stdin?.close();
+        return command;
+      } catch (_error) {
+        // Try the next launcher; the last failure is logged by the caller.
+      }
+    }
+    return null;
+  }
+
+  function startWebAppLinkHandoff() {
+    if (!webAppBoosts || !window.gBrowser) return null;
+    let openedTabs = new WeakSet();
+    const onTabOpen = event => openedTabs.add(event.target);
+    const listener = {
+      onLocationChange(browser, _webProgress, _request, location) {
+        if (location?.scheme !== "http" && location?.scheme !== "https") return;
+        if (window.gBrowser.tabs.length <= 1) return;
+        const tab = window.gBrowser.getTabForBrowser(browser);
+        if (!tab || !openedTabs.has(tab)) return;
+        openedTabs.delete(tab);
+        if (webAppHosts().includes(location.host)) return;
+        const { host, spec } = location;
+        window.gBrowser.removeTab(tab);
+        openInDesktopBrowser(spec).then(command =>
+          appendLog(
+            command ? "INFO" : "WARN",
+            `WEBAPP_LINK_HANDOFF host=${host} command=${command ?? "none"} profile=${PROFILE_ID}`,
+          ),
+        );
+      },
+    };
+    window.gBrowser.tabContainer.addEventListener("TabOpen", onTabOpen);
+    window.gBrowser.addTabsProgressListener(listener);
+    return () => {
+      window.gBrowser.tabContainer.removeEventListener("TabOpen", onTabOpen);
+      window.gBrowser.removeTabsProgressListener(listener);
+      openedTabs = null;
+    };
+  }
+
   function stateDirectory() {
     const configured = Services.env.get("XDG_STATE_HOME");
     const base = configured || Services.dirsvc.get("Home", Ci.nsIFile).path + "/.local/state";
@@ -693,6 +757,7 @@
   }
 
   ensureChromeStyle();
+  stopWebAppLinkHandoff = startWebAppLinkHandoff();
   const auxiliaryWindowObserver = {
     observe(subject, topic) {
       if (topic !== "domwindowopened") return;
@@ -708,6 +773,8 @@
     "unload",
     () => {
       Services.obs.removeObserver(auxiliaryWindowObserver, "domwindowopened");
+      stopWebAppLinkHandoff?.();
+      stopWebAppLinkHandoff = null;
       internalPageObserver?.disconnect();
       internalPageObserver = null;
       if (broadcastTimer) window.clearTimeout(broadcastTimer);

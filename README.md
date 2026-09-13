@@ -151,6 +151,14 @@ new web app picks this up from its second start, because Zen writes its
 shortcut file on the first. Closing the page with `Ctrl+W` closes the web app
 rather than leaving an empty window.
 
+Zen's password manager, form autofill and translator stay out of the way, so
+they no longer slide the toolbar out with their prompts; the site's own account
+handling is untouched. The page menu keeps copying, saving, printing and
+navigation but drops the entries that open a link somewhere else, hand the page
+to another device or open developer tools. In a themed web app a link that
+opens a new tab goes to the desktop's default browser instead, while navigation
+inside the page, and the pop-up windows sign-in flows use, stay in the web app.
+
 The installer (and `omazen setup`) adds **Install Zen Web App** and **Remove Zen
 Web App** to the app launcher and the matching entries under Install and Remove
 in the Omarchy menu. Without arguments, `install` asks in a terminal for the
