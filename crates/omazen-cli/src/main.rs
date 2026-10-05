@@ -900,7 +900,7 @@ fn doctor(json: bool) -> Result<(), String> {
     }
     let zen_version = detect_zen_version(&paths.zen_program_dir);
     match zen_version.as_deref() {
-        Some(version @ ("1.21.16b" | "1.22b")) => {
+        Some(version @ ("1.21.16b" | "1.22b" | "1.23b")) => {
             report.pass(format!("Zen {version} (fully validated version)"))
         }
         Some(version) if version_at_least(version, "1.20") => report.warn(format!(
