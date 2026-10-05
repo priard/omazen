@@ -91,6 +91,11 @@
  * untouched. Selected and hovered rows keep their more specific colors below. */
 :root[data-omazen-enabled="true"] #navigator-toolbox zen-workspace {
   color: var(--omazen-foreground) !important;
+  /* Each space also carries its own Zen theme as inline variables: a text
+   * color (white for a dark space gradient) and a primary color (Zen's blue
+   * by default). Keep every space on the Omarchy palette. */
+  --toolbox-textcolor: var(--omazen-foreground) !important;
+  --zen-primary-color: var(--omazen-accent) !important;
 }
 
 :root[data-omazen-enabled="true"] #navigator-toolbox
@@ -1443,6 +1448,34 @@
 :root[data-omazen-enabled="true"] #navigator-toolbox
   zen-folder > .tab-group-label-container:hover::before {
   background-color: var(--omazen-accent) !important;
+}
+
+/* The space switcher at the top of the tab list (Zen 1.23) draws its hover
+ * and open-menu row the same way, from a `::before` filled with
+ * `--tab-background-color-hover`, while the rules above already turn its name,
+ * icon and menu button to the accent foreground. Fill the row with the accent
+ * so that pairing is readable, in both states. */
+/* Zen's wash is translucent, so its absolutely positioned `::before` could sit
+ * above the label; an opaque fill must move underneath it. */
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator {
+  isolation: isolate;
+}
+
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator:is(:hover, [open="true"])::before {
+  background: var(--omazen-accent) !important;
+  z-index: -1;
+}
+
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator[open="true"] :is(
+  .zen-current-workspace-indicator-name,
+  .zen-current-workspace-indicator-icon,
+  .zen-current-workspace-indicator-chevron,
+  label,
+  image
+) {
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
 }
 
 /* Live folders paint their label with a gradient clipped to the glyphs plus

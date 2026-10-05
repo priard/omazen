@@ -565,9 +565,10 @@ fi
 if grep -Fq -- 'zen-workspace[active]' "$CHROME_CSS"; then
   fail "active workspace container must not receive selection background"
 fi
-# Private windows deliberately turn the indicator into an accent pill; every
-# other rule must leave Zen's native padding and background alone.
-if awk '/\.zen-current-workspace-indicator/ && !/privatebrowsingmode/ { p = 1 } p { print } p && /}/ { p = 0 }' \
+# Private windows deliberately turn the indicator into an accent pill, and its
+# hover row (`::before`) takes the accent; every other rule must leave Zen's
+# native padding and background alone.
+if awk '/\.zen-current-workspace-indicator/ && !/privatebrowsingmode/ && !/::before/ { p = 1 } p { print } p && /}/ { p = 0 }' \
   "$CHROME_CSS" |
   grep -Eq '^[[:space:]]*(padding|background)(-[[:alnum:]]+)*[[:space:]]*:'; then
   fail "workspace indicator must retain native padding and background"
