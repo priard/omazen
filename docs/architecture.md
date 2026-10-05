@@ -200,7 +200,19 @@ honors a `disabled` flag per shortcut. Before a web app starts, and on setup,
 Omazen sets that flag on the shortcuts that reveal the sidebar or toolbar or
 change the layout (compact mode, sidebars, workspaces, split view, Glance,
 pinning), but only while the profile's `lock` names no running process, since
-a running Zen owns the file. Zen keeps a minimum
+a running Zen owns the file. The managed `userChrome.css` also hides the page
+menu entries that open a link elsewhere, send the page to another device or
+open developer tools, and the profile turns off the password manager, form
+autofill and the translator, whose prompts would otherwise slide the toolbar
+out.
+
+In a themed web app the bridge also hands external links to the desktop. It
+watches the window's tabs, and when a tab that was opened while the window ran
+loads an `http(s)` address outside the recorded hosts, it closes that tab and
+runs `/usr/bin/omarchy-launch-browser` (or `xdg-open`) with the address as a
+single argument, which opens the default browser from `xdg-settings` in its own
+profile. Navigation inside a tab is left alone, so sign-in redirects still
+work, and pop-up windows are not tabs, so sign-in pop-ups stay in the web app. Zen keeps a minimum
 radius on the page that no preference removes, so the profile also gets a
 `chrome/userChrome.css` marked `omazen:webapp-managed` that squares the page
 and drops Omazen's rounding and shadow. Setup regenerates these managed

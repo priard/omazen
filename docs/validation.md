@@ -1,5 +1,47 @@
 # Release validation report
 
+## 1.9.0 Zen 1.23b
+
+Date: 2026-10-05
+Release: Omazen `1.9.0`
+Environment: Omarchy `4.0.4-1` (Quattro), native `zen-browser-bin 1.23b-1`
+(Gecko `157.0`, build ID `20261002114451`, source stamp
+`c6acdfeef8e60fe8856f2cb2007299c7241aab98`).
+
+The chrome and content stylesheets were rechecked against the Zen source
+changes from `1.22.3b` to `1.23b` and this package's `browser/omni.ja`. Zen
+1.23 removed the in-flow sidebar splitter, uses the toolbox padding as the gap
+to the page and stacks the toolbox above the content, hides the compact sidebar
+with a translate that leaves its edge inside the window, renders Library space
+cards and the space switcher from per-space inline theme variables, and focuses
+the URL bar before its results open. Each of these surfaces was inspected live
+in a disposable Zen 1.23b profile with the repository sources (computed styles
+and compositor captures before and after each change): the page shadow along
+the sidebar, the compact edge, Library sections, Developer Tools (toolbox and
+inspector documents), private and empty windows, the URL bar under a simulated
+dark space theme, and the space switcher at rest, on hover and with its menu
+open. A themed glass web app was checked on the installed build.
+
+Automated checks passed: Rust formatting, Clippy with warnings denied, 16 unit
+tests, the locked release build, syntax and release consistency, the pinned
+ShellCheck 0.11.0 and actionlint 1.7.12, the read-only, state and sync CLI
+contracts, the lifecycle suite, the JavaScript suites (including the new
+private-palette regression), palette contrast with the seven documented
+advisory warning groups, and the compositor-backed visual integration suite on
+Zen `1.23b`. CI now verifies and renders against the Zen `1.23b` release
+archive (SHA-256
+`9ad79f50f52a60b85f1a0787de227235934ea0bd994f79b739fa806081b3fcf0`).
+
+The local deployment gate installed `1.9.0` over `1.8.1` with one timestamped
+application backup. After Zen was reopened, `omazen doctor` and
+`omazen doctor --json` reported zero failures and zero warnings, identified Zen
+`1.23b` as a fully validated version, and `bridge.log` recorded
+`BRIDGE_LOADED version=1.9.0`, `WATCHER_READY backend=inotify` and a current
+`PALETTE_APPLIED` with no error or watcher fallback.
+
+The workstation rustc is `1.98.1`; the CLI was built and tested with it, and
+the release workflow builds with the pinned `1.98.0`.
+
 ## 1.7.0 Zen web apps
 
 Date: 2026-09-10

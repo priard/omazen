@@ -84,6 +84,14 @@ user_pref("browser.startup.page", 1);
 // Zen keeps a window open on an empty tab after its last tab closes; closing
 // a web app's page (Ctrl+W) closes the web app instead.
 user_pref("browser.tabs.closeWindowWithLastTab", true);
+// A web app is one site in one window. The prompts of the password manager,
+// form autofill and the translator would slide the toolbar out over it, and
+// the site's own account and autofill handling stays untouched.
+user_pref("signon.rememberSignons", false);
+user_pref("signon.generation.enabled", false);
+user_pref("extensions.formautofill.addresses.enabled", false);
+user_pref("extensions.formautofill.creditCards.enabled", false);
+user_pref("browser.translations.enable", false);
 user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
 "#;
 
@@ -441,6 +449,47 @@ const USER_CHROME: &str = r#"/* omazen:webapp-managed. Written by `omazen webapp
   --zen-webview-border-radius: 0px !important;
   --omazen-content-radius: 0px !important;
   --omazen-content-shadow: none !important;
+}
+
+/* The page menu of a web app keeps copying, saving, printing and navigation,
+ * but not the entries that open a link somewhere else, hand the page to
+ * another device or open developer tools. */
+#contentAreaContextMenu :is(
+  #context-openlink,
+  #context-openlinkprivate,
+  #context-openlinkintab,
+  #context-openlinkincontainertab,
+  #context-openlinkinusercontext-menu,
+  #context-openlinkinusercontext-popup,
+  #context-openlinkinsplitview,
+  #context-openlinksmartwindow,
+  #context-previewlink,
+  #context-openframe,
+  #context-openframeintab,
+  #context-showonlythisframe,
+  #context-searchselect,
+  #context-searchselect-private,
+  #context-visual-search,
+  #context-ask-chat,
+  #context-add-engine,
+  #context-sendlinktodevice,
+  #context-sendlinktodevice-popup,
+  #context-sendpagetodevice,
+  #context-sendpagetodevice-popup,
+  #context-bookmarklink,
+  #context-bookmarkpage,
+  #context-bookmarkframe,
+  #context-inspect,
+  #context-inspect-a11y,
+  #context-viewsource,
+  #context-viewframesource,
+  #context-viewpartialsource-selection,
+  #context-sep-open,
+  #context-sep-sendlinktodevice,
+  #context-sep-sendpagetodevice,
+  #context-sep-viewsource-commands
+) {
+  display: none !important;
 }
 "#;
 

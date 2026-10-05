@@ -4,6 +4,51 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-05
+
+Validated on Zen `1.23b` (Firefox `157.0`) and Omarchy `4.0.4`.
+
+### Added
+
+- A link that opens a new tab in a themed web app now opens in the desktop's
+  default browser, and the tab is closed. Navigation inside the page and the
+  pop-up windows sign-in flows use stay in the web app.
+- Private windows stand apart from normal ones: their surfaces shift toward
+  the theme's selection color, the page is framed in the accent, the
+  Incognito label sits on an accent pill, and the empty window says
+  "incognito" under the Zen logo.
+
+### Changed
+
+- Web apps no longer offer to save passwords, autofill forms or translate
+  pages: those prompts slid the toolbar out over the page, and the site's own
+  account handling is untouched.
+- A web app's page menu drops the entries that open a link somewhere else,
+  hand the page to another device or open developer tools.
+- The empty window, before any page is open, is raised onto the card surface
+  with a hairline edge instead of merging with the sidebar.
+- Developer Tools panes and toolbars use the raised card surface instead of the
+  theme's dark background, and their icons and secondary text use a
+  contrast-safe color instead of the muted one, which was unreadable in most
+  themes. The selected tool's underline follows the accent.
+- Zen `1.23b` is a fully validated version; `omazen doctor` no longer warns on
+  it.
+
+### Fixed
+
+- Zen `1.23b`: the page's shadow is no longer cut off along the sidebar. Zen
+  now uses the sidebar's own padding as the gap to the page and stacks the
+  sidebar above it, so the opaque sidebar hid that side of the shadow.
+- Zen `1.23b`: in compact mode, and so in web apps, a strip of the hidden
+  sidebar no longer shows along the window edge.
+- The Library's space cards and its media card follow the theme instead of a
+  grey card with blue accents and a near-white slab.
+- The address and its icon stay readable while the URL bar is being edited:
+  they turned white under a dark space theme, and in Zen `1.23b` a click
+  focuses the bar before its results open, which applied the hover colors.
+- The space switcher's name stays readable on hover and while its menu is
+  open, and every space follows the theme instead of its own Zen theme colors.
+
 ## [1.8.1] - 2026-09-11
 
 ### Changed

@@ -34,7 +34,7 @@ local server or page-exposed API. See the [architecture](docs/architecture.md) a
 
 ## Current status
 
-Omazen `1.8.1` runs its complete CLI as a directly installed Rust executable,
+Omazen `1.9.0` runs its complete CLI as a directly installed Rust executable,
 removing the former Bash implementation and launcher overhead while preserving
 the qualified command and rollback contracts. It installs with one command and
 includes [Zen web apps](#zen-web-apps) whose pages can take the theme's own
@@ -42,8 +42,8 @@ colors on a translucent, blurred window. Canonical stylesheet sources
 remain unversioned in the repository and are installed under release-versioned
 names for `chrome://` cache busting. The shared event-driven watcher, automatic
 polling fallback and external palette-provider compatibility remain intact. The
-current tested environment is Omarchy `4.0.2` (Quattro) with native
-`zen-browser-bin 1.22b-1`, based on Zen `1.22b` / Firefox `155.0.1`
+current tested environment is Omarchy `4.0.4` (Quattro) with native
+`zen-browser-bin 1.23b-1`, based on Zen `1.23b` / Firefox `157.0`
 (64-bit).
 
 The historical live qualification and complete test results are recorded in
@@ -151,6 +151,14 @@ new web app picks this up from its second start, because Zen writes its
 shortcut file on the first. Closing the page with `Ctrl+W` closes the web app
 rather than leaving an empty window.
 
+Zen's password manager, form autofill and translator stay out of the way, so
+they no longer slide the toolbar out with their prompts; the site's own account
+handling is untouched. The page menu keeps copying, saving, printing and
+navigation but drops the entries that open a link somewhere else, hand the page
+to another device or open developer tools. In a themed web app a link that
+opens a new tab goes to the desktop's default browser instead, while navigation
+inside the page, and the pop-up windows sign-in flows use, stay in the web app.
+
 The installer (and `omazen setup`) adds **Install Zen Web App** and **Remove Zen
 Web App** to the app launcher and the matching entries under Install and Remove
 in the Omarchy menu. Without arguments, `install` asks in a terminal for the
@@ -198,8 +206,8 @@ setup restores the launchers.
 ## Compatibility
 
 The official support scope is **Omarchy Quattro plus the native Arch package
-`zen-browser-bin`** installed at `/opt/zen-browser-bin`. Zen `1.22b` and
-`1.21.16b` are the fully validated versions; native Zen versions `>=1.20` are
+`zen-browser-bin`** installed at `/opt/zen-browser-bin`. Zen `1.23b`, `1.22b`
+and `1.21.16b` are the fully validated versions; native Zen versions `>=1.20` are
 compatibility candidates and produce a `doctor` warning until tested. Flatpak, Firefox,
 AppImage, tarball, source-build and other non-native installations are outside
 the supported scope. Omarchy 3 and earlier are rejected because their generated

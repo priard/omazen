@@ -34,6 +34,13 @@
   --lwt-text-color: var(--omazen-foreground) !important;
   --lwt-toolbar-field-background-color: var(--omazen-background-light) !important;
   --lwt-toolbar-field-color: var(--omazen-foreground) !important;
+  /* The focused URL bar takes its text from these Firefox tokens, which are
+   * light-dark() pairs resolved against the active space's color scheme;
+   * a dark space turned the edited address and its icon white. */
+  --toolbar-field-color: var(--omazen-foreground) !important;
+  --toolbar-field-focus-color: var(--omazen-foreground) !important;
+  --toolbar-field-background-color: var(--omazen-background-light) !important;
+  --toolbar-field-focus-background-color: var(--omazen-background-light) !important;
   --lwt-toolbar-field-border-color: var(--omazen-border) !important;
   --lwt-toolbar-field-focus: var(--omazen-background-light) !important;
   --lwt-toolbar-field-highlight: var(--omazen-accent) !important;
@@ -84,6 +91,11 @@
  * untouched. Selected and hovered rows keep their more specific colors below. */
 :root[data-omazen-enabled="true"] #navigator-toolbox zen-workspace {
   color: var(--omazen-foreground) !important;
+  /* Each space also carries its own Zen theme as inline variables: a text
+   * color (white for a dark space gradient) and a primary color (Zen's blue
+   * by default). Keep every space on the Omarchy palette. */
+  --toolbox-textcolor: var(--omazen-foreground) !important;
+  --zen-primary-color: var(--omazen-accent) !important;
 }
 
 :root[data-omazen-enabled="true"] #navigator-toolbox
@@ -159,8 +171,13 @@
   color: var(--omazen-foreground) !important;
 }
 
+/* Since Zen 1.23 the gap between the sidebar and the page is the toolbox's
+ * own inline padding rather than a separate splitter, and the toolbox stacks
+ * above the content area. An opaque toolbox therefore hides the side of the
+ * page shadow that falls into that gap. #zen-main-app-wrapper already paints
+ * the same palette background behind it, so keep the toolbox transparent. */
 :root[data-omazen-enabled="true"]:not([zen-compact-mode="true"]) #navigator-toolbox {
-  background-color: var(--omazen-background) !important;
+  background-color: transparent !important;
   color: var(--omazen-foreground) !important;
 }
 
@@ -326,6 +343,28 @@
   border-radius: calc(var(--zen-native-inner-radius) - var(--zen-compact-mode-no-padding-radius-fix, 0px)) !important;
 }
 
+/* Zen 1.23 hides the compact sidebar with a translate that leaves its last
+ * few pixels inside the window, where Zen's own toolbox is transparent. Clear
+ * our frame once the slide-out has finished (Zen animates it over 0.15s) and
+ * restore it at once whenever Zen shows the sidebar. */
+:root[data-omazen-enabled="true"][zen-compact-mode="true"]:not([zen-renaming-tab="true"]) #navigator-toolbox:not([animate="true"]):not(
+  [zen-has-hover],
+  [zen-user-show],
+  [zen-has-empty-tab],
+  [flash-popup],
+  [has-popup-menu],
+  [movingtab],
+  [zen-compact-mode-active]
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  transition:
+    translate 0.15s ease,
+    visibility 0.15s ease,
+    background-color 0s linear 0.15s,
+    border-color 0s linear 0.15s !important;
+}
+
 :root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background::before,
 :root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background::after {
   background: var(--omazen-background) !important;
@@ -393,6 +432,23 @@
   outline: 1px solid var(--omazen-accent) !important;
 }
 
+:root[data-omazen-enabled="true"] #urlbar:is([focused], [breakout-extend]) {
+  color: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:is([focused], [breakout-extend]) .urlbar-input::placeholder {
+  color: var(--omazen-foreground) !important;
+  opacity: 0.6 !important;
+}
+
+:root[data-omazen-enabled="true"] #urlbar:is([focused], [breakout-extend]) :is(
+  #identity-icon,
+  #tracking-protection-icon,
+  .urlbar-icon
+) {
+  fill: var(--omazen-foreground) !important;
+}
+
 /* Firefox gives URL-bar selections dedicated LWT colors that are more
  * specific than a generic ::selection rule. Keep the selection on the active
  * accent and pair it with the contrast color derived by the palette bridge. */
@@ -439,20 +495,20 @@
   ) !important;
 }
 
-:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-background {
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend], [focused]):hover .urlbar-background {
   background-color: var(--omazen-accent) !important;
 }
 
-:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-input {
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend], [focused]):hover .urlbar-input {
   color: var(--omazen-accent-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover .urlbar-input::placeholder {
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend], [focused]):hover .urlbar-input::placeholder {
   color: var(--omazen-accent-foreground) !important;
   opacity: 0.72 !important;
 }
 
-:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover :is(
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend], [focused]):hover :is(
   #identity-icon,
   #tracking-protection-icon,
   #zen-site-data-icon-button,
@@ -629,7 +685,7 @@
   stroke: var(--omazen-accent-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend]):hover #zen-site-data-icon-button :is(
+:root[data-omazen-enabled="true"] #urlbar:not([breakout-extend], [focused]):hover #zen-site-data-icon-button :is(
   image,
   .toolbarbutton-icon
 ) {
@@ -1195,19 +1251,28 @@
   border-color: var(--omazen-accent) !important;
 }
 
+/* With no page open the content card is empty, and on the window's own
+ * background it disappeared into the sidebar. Raise it onto the same card
+ * surface Settings uses and give it a hairline edge next to the shadow. */
 :root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) :is(
   #zen-tabbox-wrapper,
   #tabbrowser-tabbox,
   #tabbrowser-tabpanels,
   .browserSidebarContainer.deck-selected
 ) {
-  background: var(--omazen-background) !important;
+  background: color-mix(
+    in srgb,
+    var(--omazen-background) 94%,
+    var(--omazen-foreground)
+  ) !important;
 }
 
 :root[data-omazen-enabled="true"][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper {
   box-sizing: border-box;
   border-radius: var(--omazen-content-radius) !important;
-  box-shadow: var(--omazen-content-shadow) !important;
+  box-shadow:
+    var(--omazen-content-shadow),
+    0 0 0 1px var(--omazen-surface-border) !important;
   overflow: clip;
 }
 
@@ -1239,6 +1304,50 @@
   :root[data-omazen-enabled="true"][zen-has-empty-tab="true"] #zen-tabbox-wrapper::after {
     display: none !important;
   }
+}
+
+/* Private windows: the bridge shifts the palette surfaces toward the theme's
+ * selection color; the content card also gets an accent frame, the sidebar
+ * names the mode on an accent pill and the empty state says so as well. */
+:root[data-omazen-enabled="true"][privatebrowsingmode]:not([sizemode="fullscreen"]) :is(
+  .browserSidebarContainer:not([is-zen-split="true"]):not(.zen-glance-overlay),
+  #zen-tabbox-wrapper
+) {
+  /* Drawn outside the card: children are opaque and would cover an inset
+   * outline. The transparent toolbox gap leaves room for it. */
+  outline: 2px solid var(--omazen-accent) !important;
+  outline-offset: 0;
+}
+
+:root[data-omazen-enabled="true"][privatebrowsingmode] .zen-current-workspace-indicator {
+  background: var(--omazen-accent) !important;
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  border-radius: var(--tab-border-radius, 8px);
+  margin-inline: var(--zen-toolbox-padding) !important;
+  width: calc(100% - 2 * var(--zen-toolbox-padding)) !important;
+  box-sizing: border-box;
+}
+
+:root[data-omazen-enabled="true"][privatebrowsingmode] .zen-current-workspace-indicator :is(
+  .zen-current-workspace-indicator-name,
+  .zen-current-workspace-indicator-icon
+) {
+  color: inherit !important;
+  fill: inherit !important;
+  opacity: 1 !important;
+}
+
+:root[data-omazen-enabled="true"][privatebrowsingmode][zen-has-empty-tab="true"]:not([sizemode="fullscreen"]) #zen-tabbox-wrapper::after {
+  content:
+    "███████╗███████╗███╗   ██╗" "\A"
+    "╚══███╔╝██╔════╝████╗  ██║" "\A"
+    "  ███╔╝ █████╗  ██╔██╗ ██║" "\A"
+    " ███╔╝  ██╔══╝  ██║╚██╗██║" "\A"
+    "███████╗███████╗██║ ╚████║" "\A"
+    "╚══════╝╚══════╝╚═╝  ╚═══╝" "\A"
+    "\A"
+    " ── i n c o g n i t o ──";
 }
 
 :root[data-omazen-enabled="true"] #zen-sidebar-splitter::before {
@@ -1341,6 +1450,34 @@
   background-color: var(--omazen-accent) !important;
 }
 
+/* The space switcher at the top of the tab list (Zen 1.23) draws its hover
+ * and open-menu row the same way, from a `::before` filled with
+ * `--tab-background-color-hover`, while the rules above already turn its name,
+ * icon and menu button to the accent foreground. Fill the row with the accent
+ * so that pairing is readable, in both states. */
+/* Zen's wash is translucent, so its absolutely positioned `::before` could sit
+ * above the label; an opaque fill must move underneath it. */
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator {
+  isolation: isolate;
+}
+
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator:is(:hover, [open="true"])::before {
+  background: var(--omazen-accent) !important;
+  z-index: -1;
+}
+
+:root[data-omazen-enabled="true"] .zen-current-workspace-indicator[open="true"] :is(
+  .zen-current-workspace-indicator-name,
+  .zen-current-workspace-indicator-icon,
+  .zen-current-workspace-indicator-chevron,
+  label,
+  image
+) {
+  color: var(--omazen-accent-foreground) !important;
+  fill: var(--omazen-accent-foreground) !important;
+  fill-opacity: 1 !important;
+}
+
 /* Live folders paint their label with a gradient clipped to the glyphs plus
  * `-webkit-text-fill-color: transparent`, which overrides `color` outright.
  * The accent foreground was therefore a no-op on those labels and the text
@@ -1418,6 +1555,36 @@
 
 :root[data-omazen-enabled="true"] .urlbarView-row[selected] .urlbarView-title-separator::before {
   color: var(--omazen-selection-foreground) !important;
+}
+
+/* The Library (Zen 1.23) renders each space card from that space's own Zen
+ * theme, written as inline variables: a grey gradient, a blue primary color
+ * and near-black text that ignore the Omarchy palette. An important rule
+ * outranks the inline declarations, so every card shares one raised surface. */
+:root[data-omazen-enabled="true"] zen-library .zen-library-space {
+  --zen-library-space-gradient: color-mix(
+    in srgb,
+    var(--omazen-background) 94%,
+    var(--omazen-foreground)
+  ) !important;
+  --zen-primary-color: var(--omazen-accent) !important;
+  --toolbox-textcolor: var(--omazen-foreground) !important;
+  background: var(--zen-library-space-gradient) !important;
+  outline: 1px solid var(--omazen-surface-border);
+  outline-offset: -1px;
+}
+
+/* The media opt-in card is a fixed near-white (or near-black) slab. */
+:root[data-omazen-enabled="true"] .zen-library-media-opt-in {
+  background: color-mix(
+    in srgb,
+    var(--omazen-background) 94%,
+    var(--omazen-foreground)
+  ) !important;
+  color: var(--omazen-foreground) !important;
+  box-shadow:
+    var(--panel-box-shadow),
+    0 0 0 1px var(--omazen-surface-border) !important;
 }
 
 /* Web apps created with `omazen webapp install --theme` are glass unless made

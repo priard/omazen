@@ -528,8 +528,15 @@ grep -Fq -- ':not([zen-compact-mode="true"]) #navigator-toolbox' \
 NONCOMPACT_TOOLBOX_RULE=$(sed -n \
   '/:not(\[zen-compact-mode="true"\]) #navigator-toolbox {/,/^}/p' \
   "$CHROME_CSS")
-grep -Fq -- 'background-color: var(--omazen-background) !important;' \
+# Zen 1.23 stacks the toolbox above the content and uses its padding as the
+# gap to the page, so an opaque toolbox would hide the page shadow there.
+grep -Fq -- 'background-color: transparent !important;' \
+  <<< "$NONCOMPACT_TOOLBOX_RULE" || fail "non-compact toolbox must stay transparent"
+grep -Fq -- 'color: var(--omazen-foreground) !important;' \
   <<< "$NONCOMPACT_TOOLBOX_RULE" || fail "non-compact toolbox palette"
+sed -n '/#zen-main-app-wrapper {/,/^}/p' "$CHROME_CSS" | \
+  grep -Fq -- 'background: var(--omazen-background) !important;' || \
+  fail "app wrapper paints the palette behind the toolbox"
 grep -Fq -- '[zen-compact-mode="true"] .zen-toolbar-background' \
   "$CHROME_CSS" || fail "compact rounded background palette"
 grep -Fq -- '--zen-navigator-toolbox-background: transparent' \
@@ -558,7 +565,11 @@ fi
 if grep -Fq -- 'zen-workspace[active]' "$CHROME_CSS"; then
   fail "active workspace container must not receive selection background"
 fi
-if sed -n '/\.zen-current-workspace-indicator/,/}/p' "$CHROME_CSS" |
+# Private windows deliberately turn the indicator into an accent pill, and its
+# hover row (`::before`) takes the accent; every other rule must leave Zen's
+# native padding and background alone.
+if awk '/\.zen-current-workspace-indicator/ && !/privatebrowsingmode/ && !/::before/ { p = 1 } p { print } p && /}/ { p = 0 }' \
+  "$CHROME_CSS" |
   grep -Eq '^[[:space:]]*(padding|background)(-[[:alnum:]]+)*[[:space:]]*:'; then
   fail "workspace indicator must retain native padding and background"
 fi
@@ -840,6 +851,14 @@ grep -Fq 'user_pref("browser.startup.page", 1);' "$MAIL_APP/profile/user.js" || 
   fail "web app profile does not pile up restored tabs on every start"
 grep -Fq 'user_pref("browser.tabs.closeWindowWithLastTab", true);' "$MAIL_APP/profile/user.js" || \
   fail "closing a web app's last tab closes the web app"
+grep -Fq 'user_pref("signon.rememberSignons", false);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile does not offer to save passwords"
+grep -Fq 'user_pref("browser.translations.enable", false);' "$MAIL_APP/profile/user.js" || \
+  fail "web app profile does not offer translations"
+grep -Fq '#context-openlinkintab' "$MAIL_APP/profile/chrome/userChrome.css" || \
+  fail "web app page menu drops the entries that open a link elsewhere"
+grep -Fq '#context-inspect' "$MAIL_APP/profile/chrome/userChrome.css" || \
+  fail "web app page menu drops developer tools"
 if grep -Fq 'zen.widget.linux.transparency' "$MAIL_APP/profile/user.js"; then
   fail "an unthemed web app must not be glass"
 fi
@@ -1164,6 +1183,9 @@ pass "bridge filters mutations, rotates logs, and cleans up runtime resources"
 
 node "$PROJECT_ROOT/tests/watcher-regressions.mjs" || fail "JavaScript watcher regression"
 pass "shared inotify watcher filters events and broadcasts updates"
+
+node "$PROJECT_ROOT/tests/webapp-boosts.mjs" >/dev/null || fail "JavaScript web app boost regression"
+pass "web app boosts follow the theme's background and foreground"
 
 FOREIGN_PROFILE="$TEST_ROOT/foreign-profile"
 FOREIGN_PROFILE_STATE="$TEST_ROOT/foreign-profile-state"

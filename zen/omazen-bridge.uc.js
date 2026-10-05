@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name           Omazen privileged palette bridge
 // @description    Applies a validated local Omazen palette to Zen chrome and internal pages.
-// @version        1.8.1
+// @version        1.9.0
 // @author         Omazen contributors
 // @include        main
 // @WindowActor    Omazen
@@ -23,14 +23,15 @@
   const LOG_ARCHIVE_LEAF = "bridge.log.1";
   const STYLE_ID = "omazen-chrome-style";
   const CONTENT_STYLE_ID = "omazen-content-style";
-  const VERSION = "1.8.1";
-  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.8.1.css";
-  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.8.1.css";
+  const VERSION = "1.9.0";
+  const STYLE_URI = "chrome://userscripts/content/Omazen/omazen-chrome-v1.9.0.css";
+  const CONTENT_STYLE_URI = "chrome://userscripts/content/Omazen/omazen-content-v1.9.0.css";
   const {
     COLOR_KEYS,
     actorPayload,
     selectionForeground,
     deriveAccentForeground,
+    privatePalette,
     setRootPalette,
     validatePalette,
   } = ChromeUtils.importESModule(
@@ -117,6 +118,70 @@
       if (on) root.setAttribute(name, "true");
       else root.removeAttribute(name);
     }
+  }
+
+  // A web app is one site in one window, so a link that opens a new tab
+  // belongs to the desktop's browser. Navigation inside the tab stays, and so
+  // do pop-up windows, which sign-in flows use.
+  const WEBAPP_BROWSER_COMMANDS = Object.freeze([
+    "/usr/bin/omarchy-launch-browser",
+    "/usr/bin/xdg-open",
+  ]);
+  let stopWebAppLinkHandoff = null;
+
+  function webAppHosts() {
+    return Services.prefs
+      .getStringPref("omazen.webapp.hosts", "")
+      .split(",")
+      .map(host => host.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  async function openInDesktopBrowser(url) {
+    const { Subprocess } = ChromeUtils.importESModule(
+      "resource://gre/modules/Subprocess.sys.mjs",
+    );
+    for (const command of WEBAPP_BROWSER_COMMANDS) {
+      try {
+        const process = await Subprocess.call({ command, arguments: [url] });
+        process.stdin?.close();
+        return command;
+      } catch (_error) {
+        // Try the next launcher; the last failure is logged by the caller.
+      }
+    }
+    return null;
+  }
+
+  function startWebAppLinkHandoff() {
+    if (!webAppBoosts || !window.gBrowser) return null;
+    let openedTabs = new WeakSet();
+    const onTabOpen = event => openedTabs.add(event.target);
+    const listener = {
+      onLocationChange(browser, _webProgress, _request, location) {
+        if (location?.scheme !== "http" && location?.scheme !== "https") return;
+        if (window.gBrowser.tabs.length <= 1) return;
+        const tab = window.gBrowser.getTabForBrowser(browser);
+        if (!tab || !openedTabs.has(tab)) return;
+        openedTabs.delete(tab);
+        if (webAppHosts().includes(location.host)) return;
+        const { host, spec } = location;
+        window.gBrowser.removeTab(tab);
+        openInDesktopBrowser(spec).then(command =>
+          appendLog(
+            command ? "INFO" : "WARN",
+            `WEBAPP_LINK_HANDOFF host=${host} command=${command ?? "none"} profile=${PROFILE_ID}`,
+          ),
+        );
+      },
+    };
+    window.gBrowser.tabContainer.addEventListener("TabOpen", onTabOpen);
+    window.gBrowser.addTabsProgressListener(listener);
+    return () => {
+      window.gBrowser.tabContainer.removeEventListener("TabOpen", onTabOpen);
+      window.gBrowser.removeTabsProgressListener(listener);
+      openedTabs = null;
+    };
   }
 
   function stateDirectory() {
@@ -286,25 +351,71 @@
     --sidebar-selected-color: ${palette.accent} !important;
     --sidebar-background-hover: ${palette.background_light} !important;
     --card-separator-color: ${surfaceBorder} !important;
+    /* DevTools: panels and toolbars sit on the same raised surface as
+     * in-content cards; background_dark is too heavy for the dense rule and
+     * layout panes of some palettes. Icons and secondary text use the
+     * contrast-safe secondary text instead of the raw muted color. */
     --theme-body-background: ${palette.background} !important;
-    --theme-body-emphasized-background: ${palette.background_light} !important;
-    --theme-sidebar-background: ${palette.background_dark} !important;
-    --theme-toolbar-background: ${palette.background_dark} !important;
-    --theme-toolbar-alternate-background: ${palette.background_light} !important;
+    --theme-body-emphasized-background: ${surface} !important;
+    --theme-body-alternate-emphasized-background: ${raised} !important;
+    --theme-sidebar-background: ${surface} !important;
+    --theme-toolbar-background: ${surface} !important;
+    --theme-tab-toolbar-background: ${surface} !important;
+    --theme-toolbar-background-alt: ${surface} !important;
+    --theme-toolbar-alternate-background: ${palette.background} !important;
     --theme-toolbar-color: ${palette.foreground} !important;
     --theme-toolbar-selected-color: ${palette.accent} !important;
-    --theme-toolbar-hover: ${palette.background_light} !important;
-    --theme-toolbar-separator: ${palette.border} !important;
+    --theme-toolbar-hover: ${raised} !important;
+    --theme-toolbar-hover-color: ${palette.foreground} !important;
+    --theme-toolbar-background-hover: ${raised} !important;
+    --theme-toolbar-alternate-hover: ${raised} !important;
+    --theme-toolbar-hover-active: ${hover} !important;
+    --theme-toolbar-separator: ${surfaceBorder} !important;
+    --theme-toolbarbutton-color: ${palette.foreground} !important;
+    --theme-toolbarbutton-hover-background: ${raised} !important;
+    --theme-toolbarbutton-hover-color: ${palette.foreground} !important;
+    --theme-toolbarbutton-active-background: ${hover} !important;
+    --theme-toolbarbutton-checked-background: ${raised} !important;
+    --theme-toolbarbutton-checked-color: ${palette.accent} !important;
+    --theme-toolbarbutton-checked-hover-background: ${hover} !important;
+    --theme-toolbarbutton-checked-hover-color: ${palette.accent} !important;
+    --theme-accordion-header-background: ${surface} !important;
+    --theme-accordion-header-color: ${palette.foreground} !important;
+    --theme-accordion-header-hover-background: ${raised} !important;
+    --theme-accordion-header-hover-color: ${palette.foreground} !important;
+    --theme-popup-background: ${surface} !important;
+    --theme-popup-color: ${palette.foreground} !important;
+    --theme-popup-border-color: ${controlBorder} !important;
+    --theme-popup-hover-background: ${raised} !important;
+    --theme-popup-hover-color: ${palette.foreground} !important;
+    --theme-popup-dimmed: ${raised} !important;
+    --theme-search-results-background: ${surface} !important;
+    --theme-search-results-color: ${palette.foreground} !important;
+    --theme-search-results-border-color: ${surfaceBorder} !important;
+    --theme-select-background: ${raised} !important;
+    --theme-select-color: ${palette.foreground} !important;
+    --theme-button-background: ${raised} !important;
+    --theme-button-active-background: ${hover} !important;
     --theme-selection-background: ${palette.selection} !important;
     --theme-selection-color: ${selectionText} !important;
-    --theme-splitter-color: ${palette.border} !important;
-    --theme-icon-color: ${palette.foreground_muted} !important;
+    --theme-text-selection-background: ${palette.selection} !important;
+    --theme-text-selection-color: ${selectionText} !important;
+    --theme-splitter-color: ${surfaceBorder} !important;
+    --theme-emphasized-splitter-color: ${controlBorder} !important;
+    --theme-emphasized-splitter-color-hover: ${palette.accent} !important;
+    --theme-icon-color: var(--omazen-secondary-text) !important;
+    --theme-icon-dimmed-color: var(--omazen-secondary-text) !important;
+    --theme-icon-hover-color: ${palette.foreground} !important;
     --theme-icon-checked-color: ${palette.accent} !important;
     --theme-body-color: ${palette.foreground} !important;
     --theme-link-color: ${palette.accent} !important;
-    --theme-text-color-alt: ${palette.foreground_muted} !important;
+    --theme-internal-link-color: ${palette.accent} !important;
+    --theme-text-color-alt: var(--omazen-secondary-text) !important;
+    --theme-text-color-inactive: var(--omazen-secondary-text) !important;
     --theme-text-color-strong: ${palette.foreground} !important;
     --theme-focus-outline-color: ${palette.accent} !important;
+    --tab-line-selected-color: ${palette.accent} !important;
+    --tab-line-hover-color: ${controlBorder} !important;
     --omazen-scrollbar-thumb: ${palette.foreground_muted};
     --omazen-scrollbar-track: ${palette.background_dark};
     scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
@@ -546,7 +657,11 @@
   function applyPalette(palette) {
     ensureChromeStyle();
     const root = document.documentElement;
-    setRootPalette(root, palette, true);
+    setRootPalette(
+      root,
+      PrivateBrowsingUtils.isWindowPrivate(window) ? privatePalette(palette) : palette,
+      true,
+    );
     setWebAppAttributes(root, true);
     currentPalette = palette;
     syncContentPaletteSheet(palette, true);
@@ -642,6 +757,7 @@
   }
 
   ensureChromeStyle();
+  stopWebAppLinkHandoff = startWebAppLinkHandoff();
   const auxiliaryWindowObserver = {
     observe(subject, topic) {
       if (topic !== "domwindowopened") return;
@@ -657,6 +773,8 @@
     "unload",
     () => {
       Services.obs.removeObserver(auxiliaryWindowObserver, "domwindowopened");
+      stopWebAppLinkHandoff?.();
+      stopWebAppLinkHandoff = null;
       internalPageObserver?.disconnect();
       internalPageObserver = null;
       if (broadcastTimer) window.clearTimeout(broadcastTimer);

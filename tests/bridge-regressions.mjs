@@ -406,6 +406,7 @@ vm.runInNewContext(source, {
   Map,
   MutationObserver: FakeMutationObserver,
   Object,
+  PrivateBrowsingUtils: { isWindowPrivate: () => false },
   Services,
   Set,
   URL,
