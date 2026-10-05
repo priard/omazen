@@ -338,6 +338,28 @@
   border-radius: calc(var(--zen-native-inner-radius) - var(--zen-compact-mode-no-padding-radius-fix, 0px)) !important;
 }
 
+/* Zen 1.23 hides the compact sidebar with a translate that leaves its last
+ * few pixels inside the window, where Zen's own toolbox is transparent. Clear
+ * our frame once the slide-out has finished (Zen animates it over 0.15s) and
+ * restore it at once whenever Zen shows the sidebar. */
+:root[data-omazen-enabled="true"][zen-compact-mode="true"]:not([zen-renaming-tab="true"]) #navigator-toolbox:not([animate="true"]):not(
+  [zen-has-hover],
+  [zen-user-show],
+  [zen-has-empty-tab],
+  [flash-popup],
+  [has-popup-menu],
+  [movingtab],
+  [zen-compact-mode-active]
+) {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  transition:
+    translate 0.15s ease,
+    visibility 0.15s ease,
+    background-color 0s linear 0.15s,
+    border-color 0s linear 0.15s !important;
+}
+
 :root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background::before,
 :root[data-omazen-enabled="true"][zen-compact-mode="true"] .zen-toolbar-background::after {
   background: var(--omazen-background) !important;
