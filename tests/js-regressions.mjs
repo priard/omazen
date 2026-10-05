@@ -143,3 +143,27 @@ for (const [key, value] of Object.entries(palette)) {
 actor.actorCreated();
 assert.equal(attributes.get("data-omazen-enabled"), "true", "actor creation should restore saved state");
 assert.ok(shadowStyle, "actor creation should restore shadow-root styles");
+
+const { privatePalette } = await import(
+  new URL("../zen/Omazen/OmazenPalette.sys.mjs", import.meta.url)
+);
+const basePalette = Object.freeze({
+  schema_version: 1,
+  mode: "light",
+  accent: "#76634c",
+  background: "#f5e6d3",
+  background_dark: "#b8ad9e",
+  background_light: "#f5e6d3",
+  foreground: "#35302a",
+  foreground_muted: "#c8ac86",
+  selection: "#c68d95",
+  border: "#c8ac86",
+});
+const tinted = privatePalette(basePalette);
+assert.equal(tinted.background, "#edd6c8", "private windows tint the background toward selection");
+assert.equal(tinted.background_light, "#edd6c8", "private windows tint the light background");
+assert.equal(tinted.background_dark, "#bba79c", "private windows tint the dark background");
+for (const key of ["accent", "foreground", "foreground_muted", "selection", "border", "mode"]) {
+  assert.equal(tinted[key], basePalette[key], `private palette keeps ${key}`);
+}
+assert.ok(Object.isFrozen(tinted), "private palette is immutable");

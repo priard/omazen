@@ -69,6 +69,32 @@ export function selectionForeground(palette) {
   return deriveSurfaceForeground(palette, palette.selection);
 }
 
+const PRIVATE_TINT = 0.18;
+const PRIVATE_TINT_KEYS = Object.freeze(["background", "background_dark", "background_light"]);
+
+function mixColors(base, tint, amount) {
+  const channel = (color, offset) => Number.parseInt(color.slice(offset, offset + 2), 16);
+  let mixed = "#";
+  for (const offset of [1, 3, 5]) {
+    const value = Math.round(channel(base, offset) * (1 - amount) + channel(tint, offset) * amount);
+    mixed += value.toString(16).padStart(2, "0");
+  }
+  return mixed;
+}
+
+/*
+ * Private windows keep the active theme but shift its surfaces toward the
+ * theme's own selection color, so they read as a different mode at a glance
+ * without introducing a color the theme does not define.
+ */
+export function privatePalette(palette) {
+  const tinted = { ...palette };
+  for (const key of PRIVATE_TINT_KEYS) {
+    tinted[key] = mixColors(palette[key], palette.selection, PRIVATE_TINT);
+  }
+  return Object.freeze(tinted);
+}
+
 const PALETTE_KEYS = Object.freeze(["schema_version", "mode", ...COLOR_KEYS]);
 
 export function validatePalette(value) {

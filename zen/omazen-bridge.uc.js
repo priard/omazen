@@ -31,6 +31,7 @@
     actorPayload,
     selectionForeground,
     deriveAccentForeground,
+    privatePalette,
     setRootPalette,
     validatePalette,
   } = ChromeUtils.importESModule(
@@ -286,25 +287,71 @@
     --sidebar-selected-color: ${palette.accent} !important;
     --sidebar-background-hover: ${palette.background_light} !important;
     --card-separator-color: ${surfaceBorder} !important;
+    /* DevTools: panels and toolbars sit on the same raised surface as
+     * in-content cards; background_dark is too heavy for the dense rule and
+     * layout panes of some palettes. Icons and secondary text use the
+     * contrast-safe secondary text instead of the raw muted color. */
     --theme-body-background: ${palette.background} !important;
-    --theme-body-emphasized-background: ${palette.background_light} !important;
-    --theme-sidebar-background: ${palette.background_dark} !important;
-    --theme-toolbar-background: ${palette.background_dark} !important;
-    --theme-toolbar-alternate-background: ${palette.background_light} !important;
+    --theme-body-emphasized-background: ${surface} !important;
+    --theme-body-alternate-emphasized-background: ${raised} !important;
+    --theme-sidebar-background: ${surface} !important;
+    --theme-toolbar-background: ${surface} !important;
+    --theme-tab-toolbar-background: ${surface} !important;
+    --theme-toolbar-background-alt: ${surface} !important;
+    --theme-toolbar-alternate-background: ${palette.background} !important;
     --theme-toolbar-color: ${palette.foreground} !important;
     --theme-toolbar-selected-color: ${palette.accent} !important;
-    --theme-toolbar-hover: ${palette.background_light} !important;
-    --theme-toolbar-separator: ${palette.border} !important;
+    --theme-toolbar-hover: ${raised} !important;
+    --theme-toolbar-hover-color: ${palette.foreground} !important;
+    --theme-toolbar-background-hover: ${raised} !important;
+    --theme-toolbar-alternate-hover: ${raised} !important;
+    --theme-toolbar-hover-active: ${hover} !important;
+    --theme-toolbar-separator: ${surfaceBorder} !important;
+    --theme-toolbarbutton-color: ${palette.foreground} !important;
+    --theme-toolbarbutton-hover-background: ${raised} !important;
+    --theme-toolbarbutton-hover-color: ${palette.foreground} !important;
+    --theme-toolbarbutton-active-background: ${hover} !important;
+    --theme-toolbarbutton-checked-background: ${raised} !important;
+    --theme-toolbarbutton-checked-color: ${palette.accent} !important;
+    --theme-toolbarbutton-checked-hover-background: ${hover} !important;
+    --theme-toolbarbutton-checked-hover-color: ${palette.accent} !important;
+    --theme-accordion-header-background: ${surface} !important;
+    --theme-accordion-header-color: ${palette.foreground} !important;
+    --theme-accordion-header-hover-background: ${raised} !important;
+    --theme-accordion-header-hover-color: ${palette.foreground} !important;
+    --theme-popup-background: ${surface} !important;
+    --theme-popup-color: ${palette.foreground} !important;
+    --theme-popup-border-color: ${controlBorder} !important;
+    --theme-popup-hover-background: ${raised} !important;
+    --theme-popup-hover-color: ${palette.foreground} !important;
+    --theme-popup-dimmed: ${raised} !important;
+    --theme-search-results-background: ${surface} !important;
+    --theme-search-results-color: ${palette.foreground} !important;
+    --theme-search-results-border-color: ${surfaceBorder} !important;
+    --theme-select-background: ${raised} !important;
+    --theme-select-color: ${palette.foreground} !important;
+    --theme-button-background: ${raised} !important;
+    --theme-button-active-background: ${hover} !important;
     --theme-selection-background: ${palette.selection} !important;
     --theme-selection-color: ${selectionText} !important;
-    --theme-splitter-color: ${palette.border} !important;
-    --theme-icon-color: ${palette.foreground_muted} !important;
+    --theme-text-selection-background: ${palette.selection} !important;
+    --theme-text-selection-color: ${selectionText} !important;
+    --theme-splitter-color: ${surfaceBorder} !important;
+    --theme-emphasized-splitter-color: ${controlBorder} !important;
+    --theme-emphasized-splitter-color-hover: ${palette.accent} !important;
+    --theme-icon-color: var(--omazen-secondary-text) !important;
+    --theme-icon-dimmed-color: var(--omazen-secondary-text) !important;
+    --theme-icon-hover-color: ${palette.foreground} !important;
     --theme-icon-checked-color: ${palette.accent} !important;
     --theme-body-color: ${palette.foreground} !important;
     --theme-link-color: ${palette.accent} !important;
-    --theme-text-color-alt: ${palette.foreground_muted} !important;
+    --theme-internal-link-color: ${palette.accent} !important;
+    --theme-text-color-alt: var(--omazen-secondary-text) !important;
+    --theme-text-color-inactive: var(--omazen-secondary-text) !important;
     --theme-text-color-strong: ${palette.foreground} !important;
     --theme-focus-outline-color: ${palette.accent} !important;
+    --tab-line-selected-color: ${palette.accent} !important;
+    --tab-line-hover-color: ${controlBorder} !important;
     --omazen-scrollbar-thumb: ${palette.foreground_muted};
     --omazen-scrollbar-track: ${palette.background_dark};
     scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
@@ -546,7 +593,11 @@
   function applyPalette(palette) {
     ensureChromeStyle();
     const root = document.documentElement;
-    setRootPalette(root, palette, true);
+    setRootPalette(
+      root,
+      PrivateBrowsingUtils.isWindowPrivate(window) ? privatePalette(palette) : palette,
+      true,
+    );
     setWebAppAttributes(root, true);
     currentPalette = palette;
     syncContentPaletteSheet(palette, true);
