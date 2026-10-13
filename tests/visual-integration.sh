@@ -252,6 +252,9 @@ capture_window() {
   fi
   read -r width height <<<"$dimensions"
   (( width > 20 && height > 20 )) || fail "invalid capture geometry for $name: $dimensions"
+  # grim captures physical pixels for a geometry given in logical ones.
+  CAPTURE_SCALE=$(awk -v physical="$width" -v logical="${geometry##* }" \
+    'BEGIN { split(logical, size, "x"); printf "%.4f\n", physical / size[1] }')
   chrome_height=$((height / 5))
   settings_height=$((height - chrome_height))
   if [[ $IMAGE_MAGICK == magick ]]; then
@@ -324,16 +327,23 @@ assert_color_present() {
   local image=$1
   local color=$2
   local label=$3
-  local ratio
+  local measured
   if [[ $IMAGE_MAGICK == magick ]]; then
-    ratio=$(magick "$image" -fuzz 3% -fill white -opaque "#$color" \
-      -fill black +opaque white -colorspace gray -format '%[fx:mean]' info:)
+    measured=$(magick "$image" -fuzz 3% -fill white -opaque "#$color" \
+      -fill black +opaque white -colorspace gray -format '%[fx:mean] %w %h' info:)
   else
-    ratio=$(convert "$image" -fuzz 3% -fill white -opaque "#$color" \
-      -fill black +opaque white -colorspace gray -format '%[fx:mean]' info:)
+    measured=$(convert "$image" -fuzz 3% -fill white -opaque "#$color" \
+      -fill black +opaque white -colorspace gray -format '%[fx:mean] %w %h' info:)
   fi
-  awk -v value="$ratio" 'BEGIN { exit !(value >= 0.01) }' || \
-    fail "$label does not contain palette color #$color within tolerance"
+  # Chrome surfaces keep their size while a wider window only adds page
+  # background, so a share of the whole capture fails on very wide displays.
+  # Accept 1% of the capture or 1% of a 1280x800 logical reference window.
+  awk -v measured="$measured" -v scale="${CAPTURE_SCALE:-1}" 'BEGIN {
+    split(measured, value, " ");
+    pixels = value[1] * value[2] * value[3];
+    reference = 0.01 * 1280 * 800 * scale * scale;
+    exit !(value[1] >= 0.01 || pixels >= reference);
+  }' || fail "$label does not contain palette color #$color within tolerance ($measured)"
 }
 
 write_colors dark '#ff7a18' '#304050' '#a0b0c0' '#102030' '#081018' '#203040' '#f5eedd' '#506070'
