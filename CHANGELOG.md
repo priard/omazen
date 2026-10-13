@@ -4,6 +4,25 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-10-13
+
+Validated on Zen `1.23.2b` (Firefox `157.0.1`) and Omarchy `4.0.4`.
+
+### Changed
+
+- The About window follows the theme: the Zen wordmark, which was a white
+  image invisible on light themes, is drawn in the theme's text color, the
+  logo becomes the block-letter Zen mark of the empty window with "browser"
+  under it in the accent, and the link bar sits on the card surface instead
+  of the dark background.
+- Zen `1.23.2b` is a fully validated version; `omazen doctor` no longer warns on
+  it.
+
+### Fixed
+
+- Zen `1.23.2b`: the divider under pinned tabs is one color again. Zen now
+  draws its right part on the Clear button from its own fixed overlay.
+
 ## [1.9.0] - 2026-10-05
 
 Validated on Zen `1.23b` (Firefox `157.0`) and Omarchy `4.0.4`.

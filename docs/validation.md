@@ -1,5 +1,42 @@
 # Release validation report
 
+## 1.9.1 Zen 1.23.2b
+
+Date: 2026-10-13
+Release: Omazen `1.9.1`
+Environment: Omarchy `4.0.4-1` (Quattro), native `zen-browser-bin 1.23.2b-1`
+(Gecko `157.0.1`, build ID `20261009073723`, source stamp
+`185e856f68a451dc71988e988bc080c56452ea66`).
+
+The stylesheets were rechecked against the Zen source changes from `1.23b` to
+`1.23.2b`. The only visible regression was the pinned-tabs divider, whose right
+part Zen now draws on the Clear button from a fixed overlay; it was confirmed
+and fixed in a disposable Zen 1.23.2b profile with computed styles and
+captures. The themed About window was checked there in light and dark
+palettes.
+
+Automated checks passed: Rust formatting, Clippy with warnings denied, 16 unit
+tests, the locked release build, syntax and release consistency, the pinned
+ShellCheck 0.11.0 and actionlint 1.7.12, the read-only, state and sync CLI
+contracts, the lifecycle suite, the JavaScript suites, palette contrast with
+the seven documented advisory warning groups, and the compositor-backed visual
+integration suite on Zen `1.23.2b`. CI now verifies and renders against the
+Zen `1.23.2b` release archive (SHA-256
+`5e67f4fa081b1b437243c464449ea1bd2a3b15b6f932487a8aa0c25aa8514600`).
+
+The visual integration suite measures palette coverage as a share of the
+captured window. When its disposable window was the only one on a 7680-pixel
+wide workspace, the dark capture held 0.75% background-dark pixels against a
+1% threshold, on this release and on unchanged `1.9.0` alike; with the window
+tiled beside another, as in earlier runs, every check passed.
+
+The local deployment gate installed `1.9.1` over `1.9.0` with one timestamped
+application backup. After Zen was reopened, `omazen doctor` and
+`omazen doctor --json` reported zero failures and zero warnings, identified Zen
+`1.23.2b` as a fully validated version, and `bridge.log` recorded
+`BRIDGE_LOADED version=1.9.1` and `WATCHER_READY backend=inotify` with no error
+or watcher fallback.
+
 ## 1.9.0 Zen 1.23b
 
 Date: 2026-10-05
