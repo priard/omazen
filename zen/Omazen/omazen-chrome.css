@@ -119,6 +119,15 @@
   color: var(--omazen-sidebar-separator) !important;
 }
 
+/* Zen 1.23.2 draws the rest of the pinned-tabs divider as a gradient on the
+ * Clear button, from its own 10% overlay; keep both halves on one color. */
+:root[data-omazen-enabled="true"] #navigator-toolbox :is(
+  .pinned-tabs-container-separator,
+  .vertical-pinned-tabs-container-separator
+) {
+  --zen-pinned-separator-color: var(--omazen-sidebar-separator) !important;
+}
+
 :root[data-omazen-enabled="true"] #navigator-toolbox :is(
   .pinned-tabs-container-separator toolbarseparator,
   .vertical-pinned-tabs-container-separator toolbarseparator,
@@ -976,9 +985,73 @@
 }
 
 :root[data-omazen-enabled="true"] #aboutDialogContainer #bottomBox {
-  background-color: var(--omazen-background-dark) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--omazen-background) 94%,
+    var(--omazen-foreground)
+  ) !important;
   color: var(--omazen-foreground) !important;
-  border-top: 1px solid var(--omazen-border) !important;
+  border-top: 1px solid var(--omazen-surface-border) !important;
+}
+
+:root[data-omazen-enabled="true"] #aboutDialogContainer #trademark {
+  color: color-mix(
+    in srgb,
+    var(--omazen-foreground-muted) 40%,
+    var(--omazen-foreground)
+  ) !important;
+}
+
+/* Zen's wordmark is an SVG with a hard-coded white fill, which vanished on
+ * light themes. Draw the same wordmark as a mask filled with the palette
+ * foreground, in the place the background image used to take. */
+:root[data-omazen-enabled="true"] #aboutDialogContainer #rightBox {
+  position: relative;
+  background-image: none !important;
+}
+
+:root[data-omazen-enabled="true"] #aboutDialogContainer #rightBox::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 288px;
+  height: 62px;
+  background-color: var(--omazen-foreground);
+  mask: url("chrome://branding/content/about-wordmark.svg") no-repeat 0 0 / 288px auto;
+  pointer-events: none;
+}
+
+:root[data-omazen-enabled="true"] #aboutDialogContainer #rightBox:-moz-locale-dir(rtl)::before {
+  inset: 0 0 auto auto;
+  mask-position: 100% 0;
+}
+
+/* The logo becomes the same block-letter Zen mark the empty window shows. */
+:root[data-omazen-enabled="true"] #aboutDialogContainer #leftBox {
+  background-image: none !important;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 40px;
+  min-width: max-content;
+}
+
+:root[data-omazen-enabled="true"] #aboutDialogContainer #leftBox::before {
+  content:
+    "███████╗███████╗███╗   ██╗" "\A"
+    "╚══███╔╝██╔════╝████╗  ██║" "\A"
+    "  ███╔╝ █████╗  ██╔██╗ ██║" "\A"
+    " ███╔╝  ██╔══╝  ██║╚██╗██║" "\A"
+    "███████╗███████╗██║ ╚████║" "\A"
+    "╚══════╝╚══════╝╚═╝  ╚═══╝" "\A"
+    "\A"
+    "  ── b r o w s e r ──";
+  display: block;
+  color: var(--omazen-accent);
+  font: 600 13px / 1.05 monospace;
+  text-align: left;
+  white-space: pre;
+  opacity: 0.85;
+  user-select: none;
 }
 
 :root[data-omazen-enabled="true"] #aboutDialogContainer :is(
