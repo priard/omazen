@@ -269,20 +269,36 @@
   color: var(--omazen-foreground) !important;
 }
 
-:root[data-omazen-enabled="true"] #commonDialog::part(dialog-button) {
-  background-color: color-mix(
-    in srgb,
-    var(--omazen-background) 58%,
-    var(--omazen-background-light)
-  ) !important;
-  color: var(--omazen-foreground) !important;
-  border-color: var(--omazen-border) !important;
+/* Tab prompts show the site's favicon next to its host name. Firefox paints
+ * the icon on the box background so transparent favicons stay legible, which
+ * left a pale square on the themed panel and the host name glued to it. */
+:root[data-omazen-enabled="true"] #commonDialog .titleIcon {
+  background-color: transparent !important;
+  fill: var(--omazen-foreground) !important;
+  margin-inline-end: 6px !important;
 }
 
-:root[data-omazen-enabled="true"] #commonDialog::part(dialog-button):is(:hover, :focus-visible) {
-  background-color: color-mix(in srgb, var(--omazen-background-light) 82%, var(--omazen-accent)) !important;
+/* The panel is the palette background, so secondary buttons step one tone
+ * toward the foreground to read as controls; `background_light` equals the
+ * background in several Omarchy themes and would make them vanish. */
+:root[data-omazen-enabled="true"] #commonDialog::part(dialog-button) {
+  background-color: var(--omazen-surface-raised) !important;
   color: var(--omazen-foreground) !important;
-  border-color: var(--omazen-accent) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+:root[data-omazen-enabled="true"] #commonDialog::part(dialog-button):hover {
+  background-color: color-mix(in srgb, var(--omazen-surface-raised) 80%, var(--omazen-accent)) !important;
+  color: var(--omazen-foreground) !important;
+}
+
+/* The default button takes focus when the prompt opens, and Firefox draws a
+ * white ring for it; keep a single accent ring with a gap so it reads as
+ * focus rather than a second border. */
+:root[data-omazen-enabled="true"] #commonDialog::part(dialog-button):focus-visible {
+  outline: 2px solid var(--omazen-accent) !important;
+  outline-offset: 2px !important;
 }
 
 :root[data-omazen-enabled="true"] #commonDialog::part(omazen-primary-button) {
@@ -291,7 +307,7 @@
   border-color: var(--omazen-accent) !important;
 }
 
-:root[data-omazen-enabled="true"] #commonDialog::part(omazen-primary-button):is(:hover, :focus-visible) {
+:root[data-omazen-enabled="true"] #commonDialog::part(omazen-primary-button):hover {
   background-color: color-mix(in srgb, var(--omazen-accent) 82%, var(--omazen-foreground)) !important;
   color: var(--omazen-accent-foreground) !important;
 }

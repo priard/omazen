@@ -292,13 +292,20 @@
   box-shadow: none !important;
 }
 
+/* The panel sits on the palette's main background, the same surface the
+ * sidebar and toolbars use. `background_dark` is a muted mid-tone in light
+ * Omarchy themes, which turned the whole prompt into a flat grey slab with
+ * the text and buttons sunk into it. A foreground hairline and a deeper
+ * shadow lift the panel off the dimmed page instead. */
 :root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) {
-  background-color: var(--omazen-background-dark) !important;
+  background-color: var(--omazen-background) !important;
   color: var(--omazen-foreground) !important;
   border-radius: var(--border-radius-medium) !important;
-  outline: 1px solid var(--omazen-border) !important;
+  outline: 1px solid var(--omazen-control-border) !important;
   outline-offset: -1px !important;
-  box-shadow: var(--omazen-content-shadow) !important;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 14%),
+    0 12px 32px rgb(0 0 0 / 22%) !important;
 }
 
 :root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) > .dialogFrame {

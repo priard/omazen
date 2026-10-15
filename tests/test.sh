@@ -746,8 +746,17 @@ grep -A5 -F -- '#commonDialog::part(content-box) {' \
   "$CONTENT_CSS" | grep -Fq -- 'background-color: transparent' || \
   fail "common dialog content stays flush inside the chrome dialog box"
 grep -A6 -F -- ':root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) {' \
-  "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-background-dark)' || \
+  "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-background)' || \
   fail "SubDialog box carries the themed prompt surface"
+grep -A4 -F -- '#commonDialog .titleIcon {' \
+  "$CONTENT_CSS" | grep -Fq -- 'background-color: transparent' || \
+  fail "tab prompt favicon drops its native backing square"
+grep -A4 -F -- '#commonDialog::part(dialog-button) {' \
+  "$CONTENT_CSS" | grep -Fq -- 'background-color: var(--omazen-surface-raised)' || \
+  fail "common dialog secondary buttons stand off the prompt surface"
+grep -A3 -F -- '#commonDialog::part(dialog-button):focus-visible {' \
+  "$CONTENT_CSS" | grep -Fq -- 'outline: 2px solid var(--omazen-accent)' || \
+  fail "common dialog focus ring follows the accent"
 grep -A3 -F -- '.dialogBox:not(.spotlightBox) > .dialogFrame {' \
   "$CHROME_CSS" | grep -Fq -- 'background-color: transparent' || \
   fail "SubDialog frame does not paint over the themed box"
