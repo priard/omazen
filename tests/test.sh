@@ -748,6 +748,9 @@ grep -A5 -F -- '#commonDialog::part(content-box) {' \
 grep -A6 -F -- ':root[data-omazen-enabled="true"] .dialogBox:not(.spotlightBox) {' \
   "$CHROME_CSS" | grep -Fq -- 'background-color: var(--omazen-background)' || \
   fail "SubDialog box carries the themed prompt surface"
+grep -A2 -F -- ':root[data-omazen-enabled="true"]:is([zen-private-window="true"], [zen-unsynced-window="true"]) {' \
+  "$CHROME_CSS" | grep -Fq -- '--zen-primary-color: var(--omazen-accent) !important' || \
+  fail "private and unsynced windows keep the palette accent over Zen's window theme"
 grep -A4 -F -- '#commonDialog .titleIcon {' \
   "$CONTENT_CSS" | grep -Fq -- 'background-color: transparent' || \
   fail "tab prompt favicon drops its native backing square"

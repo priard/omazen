@@ -84,6 +84,25 @@
   scrollbar-color: var(--omazen-scrollbar-thumb) var(--omazen-scrollbar-track) !important;
 }
 
+/* Private and unsynced windows get their own Zen theme from an !important
+ * block on the root with the same specificity as the rule above, so Zen won
+ * there: the accent turned near-black in private windows and Zen's blue in
+ * unsynced ones, and the toolbar was forced to a dark color scheme with
+ * translucent white text even on light palettes. The extra attribute keeps
+ * the palette ahead in both kinds of window. */
+:root[data-omazen-enabled="true"]:is([zen-private-window="true"], [zen-unsynced-window="true"]) {
+  --zen-primary-color: var(--omazen-accent) !important;
+  --toolbox-textcolor: var(--omazen-foreground) !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-mode="light"]:is([zen-private-window="true"], [zen-unsynced-window="true"]) {
+  --toolbar-color-scheme: light !important;
+}
+
+:root[data-omazen-enabled="true"][data-omazen-mode="dark"]:is([zen-private-window="true"], [zen-unsynced-window="true"]) {
+  --toolbar-color-scheme: dark !important;
+}
+
 /* Zen's workspace component assigns its own color from --toolbox-textcolor.
  * Restored and additional windows can resolve that native token against the
  * system foreground instead of the active browser palette. Scope the fix to
