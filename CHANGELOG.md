@@ -4,6 +4,26 @@ All notable changes to Omazen are documented here.
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-10-19
+
+Validated on Zen `1.23.3b` (Firefox `158.0`) and Omarchy `4.0.4`.
+
+### Changed
+
+- Zen `1.23.3b` is a fully validated version; `omazen doctor` no longer warns on
+  it.
+
+### Fixed
+
+- Page prompts such as "leave this page?" no longer show as a flat grey slab
+  on light themes. The panel uses the theme's main background with a soft edge
+  and shadow, the secondary button stands out from it, the site icon loses its
+  pale backing square, and the focus ring follows the accent.
+- Private and unsynced windows keep the theme's accent. Zen's own window theme
+  won there, so the accent was near-black in private windows and Zen's blue in
+  unsynced ones, the toolbar used a dark color scheme on light themes, and
+  `omazen doctor` reported a bridge error after such a window was opened.
+
 ## [1.9.1] - 2026-10-13
 
 Validated on Zen `1.23.2b` (Firefox `157.0.1`) and Omarchy `4.0.4`.

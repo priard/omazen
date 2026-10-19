@@ -1,5 +1,48 @@
 # Release validation report
 
+## 1.9.2 Zen 1.23.3b
+
+Date: 2026-10-19
+Release: Omazen `1.9.2`
+Environment: Omarchy `4.0.4-1` (Quattro), native `zen-browser-bin 1.23.3b-1`
+(Gecko `158.0`, build ID `20261016101044`, source stamp
+`cba27b90fef1c80096c8531541efe5d7b133baae`).
+
+The restyled SubDialog prompts were checked in a disposable Zen 1.23.2b
+profile on a page with a `beforeunload` handler, with computed styles and
+captures in the user's light palette and a dark palette, including the
+keyboard focus ring on both buttons.
+
+The first local deployment gate failed: after a private window was opened,
+`omazen doctor` reported the bridge error "chrome stylesheet did not expose the
+expected primary color" with `rgb(11, 10, 11)`. The same error, with Zen's
+unsynced-window blue, had been logged since `1.9.0`. Zen's `zen-theme.css`
+sets the primary color, toolbar text color and toolbar color scheme with
+`!important` on `:root[zen-private-window]` and `:root[zen-unsynced-window]`,
+which tied Omazen's root rule. A more specific rule now keeps the palette
+there; in the disposable profile a private window resolved the accent,
+foreground and color scheme of both a light and a dark palette.
+
+Zen `1.23.3b` (Firefox `158.0`) was released before the tag. Its `zen-styles`
+changes against `1.23.2b` rename `--tab-inline-padding` to
+`--tab-padding-inline`, match `[zen-has-bookmarks]` without a value, and adjust
+the URL bar identity label, results padding and Library download actions;
+none of them is referenced by Omazen, and no selector or variable used by the
+Omazen stylesheets, bridge or actor disappeared from either `omni.ja`.
+
+Automated checks passed: the lifecycle suite with the updated dialog and
+private-window contracts, release consistency, the pinned ShellCheck and
+actionlint, and the compositor-backed visual integration suite on Zen
+`1.23.3b`. CI now verifies and renders against the Zen `1.23.3b` release
+archive (SHA-256
+`bb2045d3e21654d40fe841250092eeadfd2c1fc831eefb509222773c8bdca149`).
+
+The second local deployment gate ran `1.9.2` on Zen `1.23.3b` after several
+restarts, private windows and live palette changes: `bridge.log` recorded
+`BRIDGE_LOADED version=1.9.2` and no error, and `omazen doctor` reported zero
+failures, with one warning that `1.23.3b` was not yet a validated version,
+which this release resolves.
+
 ## 1.9.1 Zen 1.23.2b
 
 Date: 2026-10-13
